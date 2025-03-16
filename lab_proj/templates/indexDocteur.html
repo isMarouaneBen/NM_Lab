@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tableau de Bord - Cabinet Médical</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Sharp" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -14,7 +14,7 @@
     <aside>
       <div class="top">
         <div class="logo">
-          <img src="logoNMLab-removebg-preview.png" alt="Logo Cabinet Médical">
+          <img src="media/logoNMLab-removebg-preview.png" alt="Logo Cabinet Médical">
           <h2><span class="danger">Cabinet Médical</span></h2>
         </div>
         <div class="close" id="close-btn">
@@ -158,32 +158,6 @@
     </main>
   </div>
 
-  <script>
-    // Diagramme pour l'âge des patients
-    const ageChart = new Chart(document.getElementById('ageChart'), {
-      type: 'pie',
-      data: {
-        labels: ['0-18 ans', '18-30 ans', '30-50 ans', '50+ ans'],
-        datasets: [{
-          label: 'Âge des Patients',
-          data: [20, 30, 40, 10],
-          backgroundColor: ['#1976D2', '#D32F2F', '#388E3C', '#FFA000'],
-        }]
-      },
-    });
-
-    // Diagramme pour l'emploi du temps
-    const scheduleChart = new Chart(document.getElementById('scheduleChart'), {
-      type: 'bar',
-      data: {
-        labels: ['10:00', '11:00', '12:00'],
-        datasets: [{
-          label: 'Emploi du Temps',
-          data: [1, 1, 1],
-          backgroundColor: ['#1976D2', '#D32F2F', '#388E3C'],
-        }]
-      },
-    });
-  </script>
+  <script src="js/script.js"></script>
 </body>
 </html>
