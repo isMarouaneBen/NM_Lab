@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'patient_app',
     'auth_app',
     'rest_framework',
     'rest_framework.authtoken',
