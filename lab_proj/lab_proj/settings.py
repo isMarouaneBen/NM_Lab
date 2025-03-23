@@ -33,6 +33,7 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     'patient_app',
     'auth_app',
+    'docteur_app',
     'rest_framework',
     'rest_framework.authtoken',
     'django.contrib.admin',

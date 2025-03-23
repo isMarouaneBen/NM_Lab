@@ -4,20 +4,32 @@ from django.core.exceptions import ValidationError
 
 
 class RendezVousSerializer(serializers.ModelSerializer):
-
-    class Meta :
+    docteur_nom = serializers.CharField(source='docteur.user.get_full_name', read_only=True)
+    patient_nom = serializers.CharField(source='patient.user.get_full_name', read_only=True)
+    
+    class Meta:
         model = RendezVous
-        fields = ['docteur', 'patient', 'date','description']
+        fields = [ 'docteur_nom','patient_nom', 'date', 'description', 'etat']
     
     def validate(self, data):
         docteur = data['docteur']
         date = data['date']
-        rendezvous_count = RendezVous.objects.filter(date = date , docteur = docteur).count()
-        date_unique = RendezVous.objects.filter(date = date, docteur = docteur).exists()
-        if rendezvous_count >= 20 :
-            raise ValidationError("ce jour est remplie , veuillez selectionner un autre jour")
         
-        if date_unique :
-            raise ValidationError("ce docteur a deja un rendez vous a cette date")
-
+        appointment_exists = RendezVous.objects.filter(
+            docteur=docteur,
+            date=date
+        ).exists()
+        
+        if appointment_exists:
+            raise serializers.ValidationError("Ce docteur a déjà un rendez-vous à cette date et heure")
+        
+        appointment_date = date.date()
+        daily_count = RendezVous.objects.filter(
+            docteur=docteur,
+            date__date=appointment_date
+        ).count()
+        
+        if daily_count >= 20:
+            raise serializers.ValidationError("Ce jour est complet, veuillez sélectionner un autre jour")
+            
         return data
