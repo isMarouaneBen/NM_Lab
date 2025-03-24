@@ -3,8 +3,6 @@ from auth_app.models import  Docteur, Patient,User
 from patient_app.models import RendezVous
 
 class Prescription(models.Model):
-    docteur = models.ForeignKey(Docteur, on_delete=models.CASCADE)
-    patient = models.ForeignKey(Patient ,on_delete=models.CASCADE)
     date = models.ForeignKey(RendezVous, on_delete=models.CASCADE)
     diagnostique = models.CharField(max_length=100, blank = False)
     traitment = models.CharField(max_length = 100 , blank = False)

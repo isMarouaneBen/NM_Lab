@@ -31,13 +31,11 @@ class UserLoginView(ObtainAuthToken):
         email = request.data.get('email')
         password = request.data.get('password')
 
-        user = authenticate(request, username = email , password=password)
+        user = authenticate(request, username=email, password=password)
         if user is not None:
             login(request, user)
             token, created = Token.objects.get_or_create(user=user)
-            if created:
-                token.delete()
-                token = Token.objects.create(user = user)
+            
             response_data = {
                 'token': token.key,
                 'username': user.username,
@@ -45,20 +43,26 @@ class UserLoginView(ObtainAuthToken):
             }
 
             if user.role.upper() == 'PATIENT':
-                patient = user.cin
-                if patient is not None:
+                try:
+                    patient = Patient.objects.get(user=user)
                     patient_data = PatientSerializer(patient).data
                     response_data['data'] = patient_data
+                except Patient.DoesNotExist:
+                    pass
                 return Response(response_data)
+                
             elif user.role.upper() == 'DOCTEUR':
-                docteur = user.specialite
-                if docteur is not None:
+                try:
+                    docteur = Docteur.objects.get(user=user)
                     docteur_data = DocteurSerializer(docteur).data
                     response_data['data'] = docteur_data
-                    return Response(response_data)
+                except Docteur.DoesNotExist:
+                    pass
+                return Response(response_data)
                 
         else:
-            return Response({"message": "email ou mot de passe invalide"},status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"message": "email ou mot de passe invalide"}, status=status.HTTP_401_UNAUTHORIZED)
+        
         
 
 class UserLogoutVIew(APIView):

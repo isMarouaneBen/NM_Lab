@@ -3,9 +3,9 @@ from auth_app.models import Docteur, Patient
 
 class RendezVous(models.Model):
     ETATS = [
-        (('planifié'),('Planifié')),
-        (('completé'),('Completé')),
-        (('annulé'),('Annulé')),
+        ('planifié','Planifié'),
+        ('completé','Completé'),
+        ('annulé','Annulé'),
     ]
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE)
     docteur = models.ForeignKey(Docteur, on_delete=models.CASCADE)

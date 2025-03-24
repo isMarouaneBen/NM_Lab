@@ -12,19 +12,30 @@ from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
 from datetime import date
 from patient_app.serializers import RendezVousSerializer 
+from django.utils import timezone
+
+
+def update_rendez_vous_etat():
+    """Met à jour automatiquement l'état des rendez-vous en fonction de la date."""
+    maintenant = timezone.now()
+    RendezVous.objects.filter(
+        etat='planifié', 
+        date__lt=maintenant
+    ).update(etat='completé')
 
 
 @api_view(['DELETE'])
 @permission_classes(IsAuthenticated)
 def docteurCancelRendezvousView(request, rendez_vous_id):
-    rendez_vous = get_object_or_404(RendezVous, id = rendez_vous_id)
-    try:
-        rendez_vous.delete()
+    try:    
+        rendez_vous = get_object_or_404(RendezVous, id=rendez_vous_id)
+        rendez_vous.etat = 'annulé'
+        rendez_vous.save()
         subject = "Annulation d'un Rendez vous"
         message = f"""
-        Bonjour {Patient.user.last_name.upper()},
+        Bonjour {rendez_vous.patient.user.last_name.upper()},
 
-        Votre Rendez-vous avec Dr.{Docteur.user.last_name.upper()} à {RendezVous.date} a été annulé .
+        Votre Rendez-vous avec Dr.{rendez_vous.docteur.user.last_name.upper()} à {rendez_vous.date} a été annulé .
 
         Pour plus de details ,veuillez contacter le docteur, ou vous pouvez simplement reserver une autre date.
 
@@ -36,7 +47,7 @@ def docteurCancelRendezvousView(request, rendez_vous_id):
             subject=subject,
             message=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[Patient.user.email],
+            recipient_list=[rendez_vous.patient.user.email],
             fail_silently=False,
         )
     except Exception as e:
@@ -51,8 +62,9 @@ def docteurCancelRendezvousView(request, rendez_vous_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def upcomingRendezvousView(request):
+    update_rendez_vous_etat()
     today = date.today()
-    upcoming_rendezvous = RendezVous.objects.filter(date__date__gte=today)
+    upcoming_rendezvous = RendezVous.objects.filter(date__date__gte=today, etat = 'planifié')
     serializer = RendezVousSerializer(upcoming_rendezvous, many=True)
     
     if serializer.is_valid():
@@ -66,6 +78,7 @@ def upcomingRendezvousView(request):
 @api_view(['GET'])
 @permission_classes(IsAuthenticated)
 def todayRendezVousView(request):
+    update_rendez_vous_etat()
     today = date.today()
     today_rendezvous = RendezVous.objects.filter(date__date=today)
     serializer = RendezVousSerializer(today_rendezvous, many=True)
@@ -84,13 +97,29 @@ def todayRendezVousView(request):
 @api_view(['POST'])
 @permission_classes(IsAuthenticated)
 def writePrescriptionView(request):
-    serializer = PrescriptionSerializer(data = request.data)
+    doctor_id = request.user.docteur.id
+    patient_cin = request.data.get('cin_patient')
+    diagnostique = request.data.get('diagnostique')
+    traitment = request.data.get('traitment')
+    notes = request.data.get('notes')
+    rendez_vous = request.data.get('rendez_vous_date')
+    serializer = PrescriptionSerializer(data = {
+        'patient_cin':patient_cin,
+        'docteur_id':doctor_id,
+        'traitment':traitment,
+        'diagnostique': diagnostique,
+        'notes':notes,
+        'date':rendez_vous
+    })
     if serializer.is_valid():
         serializer.save()
         return Response({
-            "message": "prescription écrite avec succées"
-        }, status=status.HTTP_200_OK)
+            "message":"prescription ecrite avec succées"
+        }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -132,6 +161,7 @@ def seeMessagesView(request):
 @api_view(['POST'])
 @permission_classes(IsAuthenticated)
 def historicPrescriptionView(request, cin):
+    update_rendez_vous_etat()
     patient = get_object_or_404(Patient, cin = cin)
     rendez_vous = RendezVous.objects.filter(Patient = patient)
     if rendez_vous is not None :

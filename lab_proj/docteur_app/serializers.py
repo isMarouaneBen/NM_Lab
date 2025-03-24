@@ -12,10 +12,11 @@ class MessageSerializer(serializers.ModelSerializer):
 class PrescriptionSerializer(serializers.ModelSerializer):
     patient_cin = serializers.CharField(write_only=True) 
     docteur_id = serializers.IntegerField(write_only=True) 
-    
+    docteur_nom = serializers.CharField(source="docteur.user.get_full_name", read_only=True)  
+    date_rendez_vous = serializers.DateTimeField(source="date", read_only=True)  
     class Meta:
         model = Prescription
-        fields = ['patient_cin', 'docteur_id' ,'diagnostique', 'traitment', 'notes']    
+        fields = ['patient_cin', 'docteur_id', 'docteur_nom', 'date_rendez_vous', 'diagnostique', 'traitment', 'notes']    
     def create(self, validated_data):
         patient_cin = validated_data.pop('patient_cin')
         docteur_id = validated_data.pop('docteur_id')     

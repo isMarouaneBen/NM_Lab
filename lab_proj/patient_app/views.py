@@ -8,23 +8,38 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from docteur_app.models import Message
 from docteur_app.serializers import MessageSerializer
+from docteur_app.models import Prescription
+from docteur_app.serializers import PrescriptionSerializer
+
 
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def ReserverRendezvousView(request):
-    serializer = RendezVousSerializer(data = request.data)
-
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data , status=status.HTTP_201_CREATED)
-    else:
-        return Response(serializer.errors , status=status.HTTP_400_BAD_REQUEST)
-
+    try:
+        patient = Patient.objects.get(user = request.user)
+        nom_docteur = request.data.get('nom_docteur')
+        date_rdv = request.data.get('date_rendezvous')
+        description = request.data.get('description_rendezvous')
+        docteur = Docteur.objects.get(user__full_name = nom_docteur)
+        serializer = RendezVousSerializer(data = {
+            'docteur':docteur.id,
+            'patient':patient.id,
+            'date': date_rdv,
+            'description':description or '',
+            'etat': 'planifié'
+        })
+        if serializer.is_valid():
+            serializer.save()    
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    except (Patient.DoesNotExist, Docteur.DoesNotExist):
+        return Response({"error": "Patient ou docteur non trouvé"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def historicRendezvousView(request,cin):
     patient = get_object_or_404(Patient , cin = cin)
     rendez_vous = RendezVous.objects.filter(patient = patient)
@@ -38,8 +53,6 @@ def historicRendezvousView(request,cin):
 
 
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-
 def cancelRendezvousView(request, rendez_vous_id): 
     rendez_vous = get_object_or_404(RendezVous, id = rendez_vous_id)
     rendez_vous.delete()
@@ -49,7 +62,6 @@ def cancelRendezvousView(request, rendez_vous_id):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def writeMessageView(request):
     sender = request.User
     receiver_email = request.data.get('receiver_email')
@@ -70,8 +82,7 @@ def writeMessageView(request):
     serializer = MessageSerializer(message)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-@api_view(['POST'])
-@permission_classes(IsAuthenticated)
+@api_view(['GET'])
 def seeMessagesView(request):
     messages_envoyes = Message.objects.filter(envoie = request.User)
     messages_reçu = Message.objects.filter(reception = request.User)
@@ -85,3 +96,16 @@ def seeMessagesView(request):
         }, status=status.HTTP_404_NOT_FOUND)
     
 
+
+@api_view(['GET'])
+def patientPrescriptionsView(request):
+    patient = request.user
+    patient_prescriptions = Prescription.objects.filter(patient = patient)
+    if patient_prescriptions.exists():
+        serializer = PrescriptionSerializer(patient_prescriptions, many = True)
+        return Response(serializer.data ,status=status.HTTP_200_OK)
+    else:
+        return Response(
+            {"message": "Aucune prescription trouvée pour ce patient."},
+            status=status.HTTP_404_NOT_FOUND
+        )
