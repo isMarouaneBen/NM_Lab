@@ -5,27 +5,25 @@ from auth_app.models import User
 from .serializers import *
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view,permission_classes
-from .models import *
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
 from datetime import date
 from patient_app.serializers import RendezVousSerializer 
 from django.utils import timezone
-
+from datetime import datetime
 
 def update_rendez_vous_etat():
     """Met à jour automatiquement l'état des rendez-vous en fonction de la date."""
-    maintenant = timezone.now()
+    maintenant = datetime.now()
     RendezVous.objects.filter(
         etat='planifié', 
-        date__lt=maintenant
+        date__lt = maintenant
     ).update(etat='completé')
 
-
 @api_view(['DELETE'])
-@permission_classes(IsAuthenticated)
+@permission_classes([IsAuthenticated])
 def docteurCancelRendezvousView(request, rendez_vous_id):
     try:    
         rendez_vous = get_object_or_404(RendezVous, id=rendez_vous_id)
@@ -62,69 +60,43 @@ def docteurCancelRendezvousView(request, rendez_vous_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def upcomingRendezvousView(request):
-    update_rendez_vous_etat()
-    today = date.today()
-    upcoming_rendezvous = RendezVous.objects.filter(date__date__gte=today, etat = 'planifié')
-    serializer = RendezVousSerializer(upcoming_rendezvous, many=True)
-    
-    if serializer.is_valid():
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    return Response({
-        "message": "Une erreur a été produite"
-    }, status=status.HTTP_400_BAD_REQUEST)
-
+    now = timezone.now()
+    appointments = RendezVous.objects.filter(
+        date__gte=now,   
+        etat='planifié' 
+    )
+    serialized_data = RendezVousSerializer(appointments, many=True).data
+    return Response(serialized_data)
 
 @api_view(['GET'])
-@permission_classes(IsAuthenticated)
+@permission_classes([IsAuthenticated])
 def todayRendezVousView(request):
     update_rendez_vous_etat()
     today = date.today()
-    today_rendezvous = RendezVous.objects.filter(date__date=today)
+    today_rendezvous = RendezVous.objects.filter(date__date=today , docteur__user = request.user)
     serializer = RendezVousSerializer(today_rendezvous, many=True)
-    if serializer.is_valid():
-        if not serializer.data:
-            return Response({
-                "message": "pas de rendez-vous aujourd'hui"
-            }, status=status.HTTP_404_NOT_FOUND)
-        return Response(serializer.data, status=status.HTTP_200_OK)
     
-    return Response({
-        "message": "Une erreur a été produite"
-    }, status=status.HTTP_400_BAD_REQUEST)
-
+    if not serializer.data:
+        return Response({
+            "message": "pas de rendez-vous aujourd'hui"
+        }, status=status.HTTP_404_NOT_FOUND)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
-@permission_classes(IsAuthenticated)
+@permission_classes([IsAuthenticated])
 def writePrescriptionView(request):
-    doctor_id = request.user.docteur.id
-    patient_cin = request.data.get('cin_patient')
-    diagnostique = request.data.get('diagnostique')
-    traitment = request.data.get('traitment')
-    notes = request.data.get('notes')
-    rendez_vous = request.data.get('rendez_vous_date')
-    serializer = PrescriptionSerializer(data = {
-        'patient_cin':patient_cin,
-        'docteur_id':doctor_id,
-        'traitment':traitment,
-        'diagnostique': diagnostique,
-        'notes':notes,
-        'date':rendez_vous
-    })
+    serializer = PrescriptionSerializer(data = request.data)
     if serializer.is_valid():
         serializer.save()
         return Response({
             "message":"prescription ecrite avec succées"
         }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def writeMessageView(request):
-    sender = request.User
+    sender = request.user
     receiver_email = request.data.get('receiver_email')
     message_content = request.data.get('message_content')
     objet = request.data.get('objet')
@@ -144,10 +116,10 @@ def writeMessageView(request):
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
-@permission_classes(IsAuthenticated)
+@permission_classes([IsAuthenticated])
 def seeMessagesView(request):
-    messages_envoyes = Message.objects.filter(envoie = request.User)
-    messages_reçu = Message.objects.filter(reception = request.User)
+    messages_envoyes = Message.objects.filter(envoie = request.user)
+    messages_reçu = Message.objects.filter(reception = request.user)
     list_messages = messages_envoyes.union(messages_reçu).order_by('-date_message')
     if list_messages.exists():
         serializer = MessageSerializer(list_messages, many = True)
@@ -156,18 +128,15 @@ def seeMessagesView(request):
         return Response({
             "message": "aucun message"
         }, status=status.HTTP_404_NOT_FOUND)
-    
 
-@api_view(['POST'])
-@permission_classes(IsAuthenticated)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def historicPrescriptionView(request, cin):
     update_rendez_vous_etat()
-    patient = get_object_or_404(Patient, cin = cin)
-    rendez_vous = RendezVous.objects.filter(Patient = patient)
-    if rendez_vous is not None :
-        serializer = RendezVousSerializer(rendez_vous, many = True)
+    rendez_vous = Prescription.objects.filter(date__patient__cin = cin)
+    if rendez_vous.exists() :
+        serializer = PrescriptionSerializer(rendez_vous, many = True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     return Response({
         "message":"aucun prescriptions encore pour cet patient"
     })
-    

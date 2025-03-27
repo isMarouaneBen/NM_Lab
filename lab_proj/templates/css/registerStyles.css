@@ -1,0 +1,11 @@
+body {
+    background: linear-gradient(135deg, #007bff, #011224);
+    min-height: 100vh;
+}
+.registrationbgcolor {
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 15px;
+}
+.card {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}

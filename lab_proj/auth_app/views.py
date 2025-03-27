@@ -9,6 +9,10 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from django.core.mail import send_mail
 from django.utils import timezone
+from datetime import timedelta
+
+
+
 
 class PatientRegisterationView(APIView):
     def post(self , request):
@@ -63,7 +67,6 @@ class UserLoginView(ObtainAuthToken):
         else:
             return Response({"message": "email ou mot de passe invalide"}, status=status.HTTP_401_UNAUTHORIZED)
         
-        
 
 class UserLogoutVIew(APIView):
     permission_classes = [IsAuthenticated]
@@ -80,75 +83,67 @@ class UserLogoutVIew(APIView):
 
 class PasswordResetView(APIView):
     def post(self, request):
-        username = request.data.get('username')
+        email = request.data.get('email')
 
-        # Vérifier si l'utilisateur existe
         try:
-            user = User.objects.get(username=username)
+            user = User.objects.get(email = email)
         except User.DoesNotExist:
             return Response({"detail": "Entrer un email valide"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Générer un token de réinitialisation unique
         reset_instance = PasswordReset.objects.create(user=user)
-        reset_serializer = PasswordResetSerializer(reset_instance)
-        reset_url = f"{settings.FRONTEND_URL}/reset-password/{reset_instance.reset_id}"
+        serializer = PasswordResetSerializer(reset_instance)
+        if serializer.is_valid():
+            reset_url = f"{settings.FRONTEND_URL}/reset-password/{reset_instance.reset_id}"
 
-        # Construire l'email
-        subject = "Réinitialisation du mot de passe"
-        message = f"""
-        Bonjour {user.last_name.upper()},
+            subject = "Réinitialisation du mot de passe"
+            message = f"""
+            Bonjour {user.last_name.upper()},
 
-        Voici le lien à suivre pour réinitialiser votre mot de passe : {reset_url}
+            Voici le lien à suivre pour réinitialiser votre mot de passe : {reset_url}
 
-        NB :
-        - Le lien expire dans 24 heures.
-        - Si vous n'avez pas demandé une réinitialisation, ignorez cet email ou contactez le support.
+            NB :
+            - Le lien expire dans 24 heures.
+            - Si vous n'avez pas demandé une réinitialisation, ignorez cet email ou contactez le support.
 
-        Cordialement,
-        Équipe LM_LAB
-        """
+            Cordialement,
+            Équipe LM_LAB
+            """
 
-        # Envoyer l'email
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
-
-        return Response(
-            {"message": "Un email de confirmation a été envoyé si le compte existe"},
-            status=status.HTTP_200_OK,
-        )
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+            return Response(
+                {"message": "Un email de confirmation a été envoyé si le compte existe"},
+                status=status.HTTP_200_OK,
+            )
+        return Response(serializer.errors , status = status.HTTP_400_BAD_REQUEST)
 
         
+
+
 
 
 class PasswordConfirmation(APIView):
-    def post(self,request,reset_id):
-        password_reset_id = PasswordReset.objects.get(reset_id =reset_id)
-        
-        password = request.data.get('password')
-        confirm_password = request.data.get('confirm_password')
-
-        if password != confirm_password:
-            return Response({
-                "erreur":"Les mots de passe ne correspondent pas."
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        expiration_time = password_reset_id.created_when + timezone.timedelta(days=1)
-        if timezone.now() > expiration_time :
-            return Response({
-                "erreur":"lien de reeinitialisation expiré"
-            }, status=status.HTTP_400_BAD_REQUEST)
-        user = password_reset_id.user
-        user.set_password(password)
-        user.save()
-        token, _ = Token.objects.update_or_create(user=user)
-        password_reset_id.delete()
-        return Response({
-            "detail":"reeinitialisation du mot de passe avec succées"
-        }, status=status.HTTP_200_OK)
-
+    def post(self, request, reset_id):
+        try:
+            password_reset = PasswordReset.objects.get(reset_id=reset_id)
+            if request.data['password'] != request.data['confirm_password']:
+                return Response({"erreur": "Les mots de passe ne correspondent pas"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+            if timezone.now() > password_reset.created_when + timedelta(days=1):
+                return Response({"erreur": "Lien expiré"}, 
+                              status=status.HTTP_400_BAD_REQUEST)
+            user = password_reset.user
+            user.set_password(request.data['password'])
+            user.save()
+            password_reset.delete()
+            return Response({"detail": "Mot de passe mis à jour"}, 
+                          status=status.HTTP_200_OK)
+        except PasswordReset.DoesNotExist:
+            return Response({"erreur": "Lien invalide"}, 
+                          status=status.HTTP_404_NOT_FOUND)
         

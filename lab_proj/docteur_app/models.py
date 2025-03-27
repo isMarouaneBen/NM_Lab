@@ -4,8 +4,8 @@ from patient_app.models import RendezVous
 
 class Prescription(models.Model):
     date = models.ForeignKey(RendezVous, on_delete=models.CASCADE)
-    diagnostique = models.CharField(max_length=100, blank = False)
-    traitment = models.CharField(max_length = 100 , blank = False)
+    diagnostique = models.TextField(blank = False)
+    traitment = models.TextField(blank = False)
     notes = models.TextField(max_length=256, blank = True)
 
 class Message(models.Model):

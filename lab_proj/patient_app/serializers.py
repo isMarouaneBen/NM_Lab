@@ -7,13 +7,25 @@ class RendezVousSerializer(serializers.ModelSerializer):
     docteur_nom = serializers.CharField(source='docteur.user.get_full_name', read_only=True)
     patient_nom = serializers.CharField(source='patient.user.get_full_name', read_only=True)
     
+    docteur = serializers.PrimaryKeyRelatedField(
+        queryset=Docteur.objects.all(), 
+        required=True
+    )
+    patient = serializers.PrimaryKeyRelatedField(
+        queryset=Patient.objects.all(), 
+        required=True
+    )
+    
     class Meta:
         model = RendezVous
-        fields = [ 'docteur_nom','patient_nom', 'date', 'description', 'etat']
+        fields = ['docteur', 'patient', 'docteur_nom', 'patient_nom', 'date', 'description', 'etat']
     
     def validate(self, data):
-        docteur = data['docteur']
-        date = data['date']
+        docteur = data.get('docteur')
+        date = data.get('date')
+        
+        if not docteur or not date:
+            raise serializers.ValidationError("Docteur et date sont requis")
         
         appointment_exists = RendezVous.objects.filter(
             docteur=docteur,
@@ -31,5 +43,5 @@ class RendezVousSerializer(serializers.ModelSerializer):
         
         if daily_count >= 20:
             raise serializers.ValidationError("Ce jour est complet, veuillez sélectionner un autre jour")
-            
+        
         return data
