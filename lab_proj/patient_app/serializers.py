@@ -23,6 +23,7 @@ class RendezVousSerializer(serializers.ModelSerializer):
     def validate(self, data):
         docteur = data.get('docteur')
         date = data.get('date')
+
         
         if not docteur or not date:
             raise serializers.ValidationError("Docteur et date sont requis")
@@ -43,5 +44,9 @@ class RendezVousSerializer(serializers.ModelSerializer):
         
         if daily_count >= 20:
             raise serializers.ValidationError("Ce jour est complet, veuillez sélectionner un autre jour")
-        
+                
         return data
+    
+    def create(self, validated_data):
+        rendezvous = RendezVous.objects.create(**validated_data)
+        return rendezvous

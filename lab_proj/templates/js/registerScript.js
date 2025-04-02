@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
         spinner.classList.remove('d-none');
 
         const url = currentRole === 'docteur' 
-            ? 'http://127.0.0.1:8000/users/register/doctor/' 
+            ? 'http://127.0.0.1:8000/users/register/docteur/' 
             : 'http://127.0.0.1:8000/users/register/patient/';
 
         const userData = {

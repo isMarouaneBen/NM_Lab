@@ -4,23 +4,15 @@ from .models import *
 class MessageSerializer(serializers.ModelSerializer):
     '''
         ce serialiseur a pour but de convertir les messages d'aprés models.py(la base de donnée) sous format JSON.
-
-        -POST : 
-        {
-            "envoyeur_email": "celui qui envoie l'email",
-            "recepteur_email": "celui qui recevoie l'email",
-            "objet" : "le sujet du message",
-            "date": "date rendez-vous associé",
-            "message_content": "contenue du message",
-            "date_message": "date d'envoie du message"
-        } 
     '''
-    envoyeur_email = serializers.CharField(source='envoie.username', read_only=True)
-    recepteur_email = serializers.CharField(source='reception.username', read_only=True)
 
     class Meta :
         model = Message
-        fields = ['envoyeur_email', 'recepteur_email', 'objet','date', 'message_content', 'date_message']
+        fields = '__all__'
+        
+    def create(self, validated_data):
+        message = Message.objects.create(**validated_data)
+        return message
 
 class PrescriptionSerializer(serializers.ModelSerializer):
    '''

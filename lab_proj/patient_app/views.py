@@ -52,13 +52,20 @@ def ReserverRendezvousView(request):
         return Response({"error": "Patient non trouvé"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
+
 def historicRendezvousView(request,cin):
     patient = get_object_or_404(Patient , cin = cin)
     rendez_vous = RendezVous.objects.filter(patient = patient)
     serializer = RendezVousSerializer(rendez_vous, many = True)
     try :
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if rendez_vous.exists():
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({
+            "message" : "aucun rendez vous pour cet/cette patient(e)"
+        }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({
             "error":str(e)
@@ -66,17 +73,21 @@ def historicRendezvousView(request,cin):
 
 
 @api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+
 def cancelRendezvousView(request, rendez_vous_id): 
     rendez_vous = get_object_or_404(RendezVous, id = rendez_vous_id)
     rendez_vous.delete()
     return Response({
         "message":"rendez-vous annulé avec succés"
-    },status = status.HTTP_204_NO_CONTENT)
+    },status = status.HTTP_202_ACCEPTED)
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
+
 def writeMessageView(request):
-    sender = request.User
+    sender = request.user
     receiver_email = request.data.get('receiver_email')
     message_content = request.data.get('message_content')
     objet = request.data.get('objet')
@@ -86,19 +97,24 @@ def writeMessageView(request):
         receiver = User.objects.get(email=receiver_email)
     except User.DoesNotExist:
         return Response({"message": "destinataire non trouvable."}, status=status.HTTP_404_NOT_FOUND)
-    message = Message.objects.create(
-        envoie=sender,
-        reception=receiver,
-        message_content=message_content,
-        objet=objet
-    )
-    serializer = MessageSerializer(message)
-    return Response(serializer.data, status=status.HTTP_201_CREATED)
+    message_data = {
+        'objet': objet,
+        'envoie': sender.id,
+        'reception': receiver.id,
+        'message_content': message_content
+    }
+    serializer = MessageSerializer(data = message_data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors , status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
+
 def seeMessagesView(request):
-    messages_envoyes = Message.objects.filter(envoie = request.User)
-    messages_reçu = Message.objects.filter(reception = request.User)
+    messages_envoyes = Message.objects.filter(envoie = request.user)
+    messages_reçu = Message.objects.filter(reception = request.user)
     list_messages = messages_envoyes.union(messages_reçu).order_by('-date_message')
     if list_messages.exists():
         serializer = MessageSerializer(list_messages, many = True)
@@ -110,6 +126,8 @@ def seeMessagesView(request):
     
 
 
+
+@permission_classes([IsAuthenticated])
 @api_view(['GET'])
 def patientPrescriptionsView(request):
     patient = request.user

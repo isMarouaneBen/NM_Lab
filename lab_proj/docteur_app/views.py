@@ -95,6 +95,7 @@ def writePrescriptionView(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+
 def writeMessageView(request):
     sender = request.user
     receiver_email = request.data.get('receiver_email')
@@ -106,14 +107,18 @@ def writeMessageView(request):
         receiver = User.objects.get(email=receiver_email)
     except User.DoesNotExist:
         return Response({"message": "destinataire non trouvable."}, status=status.HTTP_404_NOT_FOUND)
-    message = Message.objects.create(
-        envoie=sender,
-        reception=receiver,
-        message_content=message_content,
-        objet=objet
-    )
-    serializer = MessageSerializer(message)
-    return Response(serializer.data, status=status.HTTP_201_CREATED)
+    message_data = {
+        'objet': objet,
+        'envoie': sender.id,
+        'reception': receiver.id,
+        'message_content': message_content
+    }
+    serializer = MessageSerializer(message_data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors , status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
