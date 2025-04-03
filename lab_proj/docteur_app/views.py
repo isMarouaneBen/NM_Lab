@@ -22,7 +22,7 @@ def update_rendez_vous_etat():
         date__lt = maintenant
     ).update(etat='completé')
 
-@api_view(['DELETE'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def docteurCancelRendezvousView(request, rendez_vous_id):
     try:    
@@ -39,7 +39,7 @@ def docteurCancelRendezvousView(request, rendez_vous_id):
 
         on s'excuse et on vous souhaite une bonne journée.
         Cordialement,
-        Équipe LM_LAB
+        Équipe NM_LAB
         """
         send_mail(
             subject=subject,
