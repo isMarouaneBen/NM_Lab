@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription - NMLab</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href = "css/registerStyles.css" rel = "stylesheet">
+</head>
+<body>
+    <header class="container text-light p-5 text-center text-md-start mt-5">
+        <div class="row align-items-center justify-content-center">
+            <div class="col-md-8 col-lg-6 mt-4 mt-md-0">
+                <div class="card p-4 registrationbgcolor text-light border-0">
+                    <h2 class="text-center mb-4">Inscription</h2>
+
+                    <!-- Error message container -->
+                    <div id="errorAlert" class="alert alert-danger d-none"></div>
+
+                    <div class="mb-3 text-center">
+                        <div class="btn-group" role="group" aria-label="Registration Type">
+                            <button type="button" id="patientBtn" class="btn btn-outline-light btn-sm active">Patient</button>
+                            <button type="button" id="doctorBtn" class="btn btn-outline-light btn-sm">Docteur</button>
+                        </div>
+                    </div>
+
+                    <form id="registrationForm">
+                        <div class="mb-3">
+                            <label for="prenom" class="form-label">Prénom</label>
+                            <input type="text" required class="form-control" id="prenom" placeholder="Votre prénom">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="nom" class="form-label">Nom</label>
+                            <input type="text" required class="form-control" id="nom" placeholder="Votre nom">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" required class="form-control" id="email" placeholder="email@exemple.com">
+                        </div>
+        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Mot de passe</label>
+                            <input type="password" required class="form-control" id="password" placeholder="Mot de passe">
+                        </div>
+
+                        <div id="additionalFields">
+                            <div class="mb-3">
+                                <label class="form-label">Date de Naissance</label>
+                                <input type="date" class="form-control" id="date_naissance" name="date_naissance">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Numéro d'identité (CIN)</label>
+                                <input type="text" class="form-control" id="cin" name="cin" placeholder="CIN">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Allergies</label>
+                                <select class="form-control" id="allergies" name="allergies">
+                                    <option value="Aucun">Aucun</option>
+                                    <option value="Médicamenteuses">Médicamenteuses</option>
+                                    <option value="Alimentaires">Alimentaires</option>
+                                    <option value="Insecteuses">Insecteuses</option>
+                                    <option value="Autre">Autre</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Groupe Sanguin</label>
+                                <input type="text" class="form-control" id="groupe_sanguin" name="groupe_sanguin" placeholder="A+, A-, O+, O-...">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Sexe</label>
+                                <select class="form-control" id="sexe" name="sexe">
+                                    <option value="M">M</option>
+                                    <option value="F">F</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <button type="submit" class="btn btn-primary w-100 py-2 mt-3">
+                            <span id="submitText">S'inscrire</span>
+                            <span id="spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        </button>
+
+                        <div class="d-flex justify-content-between mt-3">
+                            <a href="login.html" class="text-light text-decoration-none">Déjà un compte ?</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <script src="js/registerScript.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
