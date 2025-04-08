@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="css/patient.css">
+    <link rel="icon" href="media/logoNMLab-removebg-preview.png">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="profile">
+                <h3>Marouane ben Haddou</h3>
+                <p>Patient</p>
+            </div>
+            <nav>
+                <ul>
+                    <li class="active" data-tab="dashboard"><i class="fas fa-home"></i> Dashboard</li>
+                    <li data-tab="appointments"><i class="fas fa-calendar-check"></i> Appointments</li>
+                    <li data-tab="history"><i class="fas fa-history"></i> History</li>
+                    <li data-tab="prescriptions"><i class="fas fa-prescription-bottle-alt"></i> Prescriptions</li>
+                    <li data-tab="profile"><i class="fas fa-user"></i> Profile</li>
+                </ul>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <header>
+                <h1 id="page-title">Patient Dashboard</h1>
+                <div class="user-actions">
+                    <button class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div class="content active" id="dashboard-content">
+                <div class="cards">
+                    <div class="card">
+                        <h3>Next Appointment</h3>
+                        <div class="next-appointment">
+                            <p><strong>Dr. Martin</strong> - Cardiologist</p>
+                            <p><i class="far fa-calendar-alt"></i> June 15, 2023, 14:30</p>
+                            <button class="btn-cancel">Cancel</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Current Prescriptions</h3>
+                        <div class="current-prescription">
+                            <p><strong>Atorvastatin</strong> - 20mg</p>
+                            <p>1 tablet per day</p>
+                            <button class="btn-details">View Details</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="quick-actions">
+                    <button class="btn-quick" id="btn-new-appointment"><i class="fas fa-plus"></i> New Appointment</button>
+                    <button class="btn-quick"><i class="fas fa-file-medical"></i> Request Prescription</button>
+                </div>
+            </div>
+
+            <!-- Appointments Content -->
+            <div class="content" id="appointments-content">
+                <h2>Schedule an Appointment</h2>
+                <div class="appointment-form">
+                    <div class="form-group">
+                        <label for="specialty">Specialty:</label>
+                        <select id="specialty">
+                            <option value="">Select a Specialty</option>
+                            <option value="cardiology">Cardiology</option>
+                            <option value="dermatology">Dermatology</option>
+                            <option value="general">General Practitioner</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="doctor">Doctor:</label>
+                        <select id="doctor" disabled>
+                            <option value="">Select a Specialty First</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="date">Date:</label>
+                        <input type="date" id="date">
+                    </div>
+                    <div class="form-group">
+                        <label for="time">Time:</label>
+                        <select id="time" disabled>
+                            <option value="">Select a Date First</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="reason">Reason:</label>
+                        <textarea id="reason" rows="3"></textarea>
+                    </div>
+                    <button class="btn-submit" id="btn-submit-appointment">Schedule Appointment</button>
+                </div>
+
+                <h2>My Upcoming Appointments</h2>
+                <div class="upcoming-appointments">
+                    <!-- Will be populated by JS -->
+                </div>
+            </div>
+
+            <!-- History Content -->
+            <div class="content" id="history-content">
+                <h2>Appointment History</h2>
+                <div class="history-list">
+                    <!-- Will be populated by JS -->
+                </div>
+            </div>
+
+            <!-- Prescriptions Content -->
+            <div class="content" id="prescriptions-content">
+                <h2>My Prescriptions</h2>
+                <div class="prescription-list">
+                    <!-- Will be populated by JS -->
+                </div>
+            </div>
+
+            <!-- Profile Content -->
+            <div class="content" id="profile-content">
+                <h2>Profile</h2>
+                <div class="profile-details">
+                    <!-- Will be populated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Appointment Details -->
+    <div class="modal" id="appointment-modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="modal-title">Appointment Details</h2>
+            <div id="modal-body">
+                <!-- Content will be added by JS -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="modal-cancel-btn">Cancel Appointment</button>
+                <button class="btn-close-modal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/patient.js"></script>
+</body>
+</html>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
