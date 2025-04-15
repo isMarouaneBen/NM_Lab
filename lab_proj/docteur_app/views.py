@@ -60,6 +60,7 @@ def docteurCancelRendezvousView(request, rendez_vous_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def upcomingRendezvousView(request):
+    update_rendez_vous_etat()
     now = timezone.now()
     appointments = RendezVous.objects.filter(
         date__gte=now,   

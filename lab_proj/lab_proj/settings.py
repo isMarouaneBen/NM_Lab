@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'stat_app',
     'corsheaders',
     'patient_app',
     'auth_app',
