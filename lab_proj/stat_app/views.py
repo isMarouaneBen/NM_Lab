@@ -62,3 +62,67 @@ def MoyenAgeView(request):
     except Exception :
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ChartAgeRepartitionView(request):
+    list_data = []
+    try :
+        all_patient = Patient.objects.all()
+        for i in all_patient :
+            age = (datetime.now().date() - i.date_naissance).days // 365
+            if age <= 18 :
+                category_age = '0-18 ans'
+            elif age > 18 and age <= 25 :
+                category_age = '18-25 ans'
+            elif age > 25 and age <= 40:
+                category_age = '25-40 ans'
+            else :
+                category_age = '+40 ans'
+            list_data.append({
+                'category_age': category_age ,
+                'age': age
+            })
+        return Response(list_data , status=status.HTTP_200_OK)
+    except Exception :
+        return Response(status = status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ChartBloodRepartitionView(request):
+    try:
+        blood_types = ['A+', 'B+', 'O+', 'A-', 'B-', 'O-', 'AB+', 'AB-']
+        list_data = []
+        
+        for blood_type in blood_types:
+            count = Patient.objects.filter(groupe_sanguin=blood_type).count()
+            list_data.append({
+                'category_blood': blood_type,
+                'data_quantity': count
+            })
+            
+        return Response(list_data, status=status.HTTP_200_OK)
+    except Exception:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ChartRdvProgressionView(request):
+    try :
+        months = [
+        "janvier", "février", "mars", "avril", "mai", "juin",
+        "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+        ]
+        list_data = []
+        for i in range(1,13) :
+            count_rendezvous = RendezVous.objects.filter(date__date__month = i).count()
+            list_data.append({
+                'count':count_rendezvous,
+                'month': months[i-1]
+            })
+        return Response(list_data, status=status.HTTP_200_OK)
+    except Exception :
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
