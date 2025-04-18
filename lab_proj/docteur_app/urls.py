@@ -1,13 +1,17 @@
-# appointments_app/urls.py
 from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('cancel-rendezvous/<int:rendez_vous_id>/', views.docteurCancelRendezvousView, name='cancel_rendezvous'),
-    path('upcoming-rendezvous/', views.upcomingRendezvousView, name='upcoming_rendezvous'),
-    path('today-rendezvous/', views.todayRendezVousView, name='today_rendezvous'),
-    path('write-prescription/', views.writePrescriptionView, name='write_prescription'),
-    path('write-message/', views.writeMessageView, name='write_message'),
-    path('see-messages/', views.seeMessagesView, name='see_messages'),
-    path('historic-prescriptions/<str:cin>/', views.historicPrescriptionView, name='historic_prescriptions'),
+    # Rendez-vous
+    path('api/annuler-rdv/<int:rendez_vous_id>/', views.docteurCancelRendezvousView, name='annuler_rdv'),
+    path('api/rdv-prochains/', views.upcomingRendezvousView, name='rdv_prochains'),
+    path('api/rdv-aujourdhui/', views.todayRendezVousView, name='rdv_aujourdhui'),
+    
+    # Prescriptions
+    path('api/creer-prescription/', views.writePrescriptionView, name='creer_prescription'),
+    path('api/historique-prescriptions/<str:cin>/', views.historicPrescriptionView, name='historique_prescriptions'),
+    
+    # Messages
+    path('api/envoyer-message/', views.writeMessageView, name='envoyer_message'),
+    path('api/boite-reception/', views.seeMessagesView, name='boite_reception'),
 ]

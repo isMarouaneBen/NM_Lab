@@ -1,319 +1,332 @@
 document.addEventListener('DOMContentLoaded', function() {
-  // Global state for the doctor dashboard
+  // Configuration
+  const API_BASE_URL = 'http://localhost:8000/api';
+  const CSS_CLASSES = {
+      activeTab: 'active',
+      modalVisible: 'active',
+      notification: 'notification',
+      messageDoctor: 'message.doctor',
+      messagePatient: 'message.patient'
+  };
+
+  // State
   const state = {
-    // Today's appointments for the doctor
-    todaysAppointments: [
-      {
-        id: 1,
-        patientName: 'Imane Bouzid',
-        specialty: 'Cardiology',
-        date: '2023-06-15',
-        time: '09:30',
-        reason: 'Routine check-up'
-      },
-      {
-        id: 2,
-        patientName: 'Leila Bensalem',
-        specialty: 'Cardiology',
-        date: '2023-06-15',
-        time: '10:15',
-        reason: 'Follow-up consultation'
-      }
-    ],
-    prescriptions: [
-      {
-        patientName: 'Jane Doe',
-        medication: 'Atorvastatin',
-        dosage: '20mg',
-        instructions: 'Take one tablet daily after dinner',
-        date: '2023-06-10'
-      }
-    ],
-    messages: [],
-    profile: {
-      name: 'Dr. Nassima Maarouf',
-      specialty: 'Cardiology',
-      email: 'dr.NassimaMaa@gmail.com',
-      phone: '0687654321',
-      office: 'Room 101, NMLab'
-    }
+      currentUser: null,
+      appointments: [],
+      prescriptions: [],
+      messages: [],
+      patients: [],
+      currentPatient: null
   };
 
   // DOM Elements
   const DOM = {
-    tabs: document.querySelectorAll('.sidebar nav ul li'),
-    contents: document.querySelectorAll('.content'),
-    pageTitle: document.getElementById('page-title'),
-    // Dashboard
-    todayAppointmentsContainer: document.querySelector('.today-appointments'),
-    // Appointments
-    appointmentListContainer: document.querySelector('.appointment-list'),
-    // Messaging
-    chatMessages: document.getElementById('chat-messages'),
-    messageInput: document.getElementById('message-text'),
-    // Prescription form
-    btnSubmitPrescription: document.getElementById('btn-submit-prescription'),
-    // Prescription History
-    prescriptionHistoryList: document.querySelector('.prescription-history-list'),
-    // Profile details
-    profileDetails: document.querySelector('.profile-details'),
-    // Modal
-    appointmentModal: document.getElementById('appointment-modal'),
-    modalTitle: document.getElementById('modal-title'),
-    modalBody: document.getElementById('modal-body'),
-    modalCancelBtn: document.getElementById('modal-cancel-btn'),
-    closeModalBtns: document.querySelectorAll('.close-modal, .btn-close-modal')
+      // Navigation
+      sidebar: document.querySelector('.sidebar'),
+      mainContent: document.querySelector('.main-content'),
+      
+      // Sections
+      dashboardContent: document.getElementById('dashboard-content'),
+      appointmentsContent: document.getElementById('appointments-content'),
+      messagesContent: document.getElementById('messages-content'),
+      prescriptionsContent: document.getElementById('prescriptions-content'),
+      profileContent: document.getElementById('profile-content'),
+      
+      // Elements
+      appointmentList: document.querySelector('.appointment-list'),
+      prescriptionList: document.querySelector('.prescription-history-list'),
+      messageList: document.getElementById('chat-messages'),
+      messageInput: document.getElementById('message-text'),
+      patientList: document.querySelector('.patients-list')
   };
 
-  // Initialization
-  initEventListeners();
-  renderAll();
+  // *******************************************
+  // Fonctions d'initialisation
+  // *******************************************
 
-  function initEventListeners() {
-    // Tab switching
-    DOM.tabs.forEach(tab => {
-      tab.addEventListener('click', () => switchTab(tab.dataset.tab));
-    });
+  async function initializeApp() {
+      await loadCurrentUser();
+      await loadAllData();
+      setupEventListeners();
+      setupUI();
+  }
 
-    // Delegate appointment action buttons (View/Cancel)
-    document.addEventListener('click', function(e) {
-      if (e.target.closest('.btn-delete')) {
-        const id = parseInt(e.target.closest('.btn-delete').dataset.id);
-        if (confirm("Are you sure you want to cancel this appointment? The patient will be notified.")) {
-          cancelAppointment(id);
-          alert("The patient has been notified about the cancellation.");
-        }
+  // *******************************************
+  // Fonctions de chargement des données
+  // *******************************************
+
+  async function loadCurrentUser() {
+      try {
+          const response = await fetch(`${API_BASE_URL}/profil/`, {
+              headers: getAuthHeaders()
+          });
+          state.currentUser = await response.json();
+      } catch (error) {
+          showError('Erreur de chargement du profil');
       }
-      if (e.target.closest('.btn-view')) {
-        const id = parseInt(e.target.closest('.btn-view').dataset.id);
-        viewAppointment(id);
+  }
+
+  async function loadAllData() {
+      try {
+          await Promise.all([
+              loadAppointments(),
+              loadPrescriptions(),
+              loadMessages(),
+              loadPatients()
+          ]);
+      } catch (error) {
+          showError('Erreur de chargement des données');
       }
-    });
-
-    // Modal close buttons
-    DOM.closeModalBtns.forEach(btn => {
-      btn.addEventListener('click', () => DOM.appointmentModal.classList.remove('active'));
-    });
-
-    // Modal cancel appointment button
-    if (DOM.modalCancelBtn) {
-      DOM.modalCancelBtn.addEventListener('click', function() {
-        const id = parseInt(this.dataset.id);
-        cancelAppointment(id);
-        DOM.appointmentModal.classList.remove('active');
-        alert("The patient has been notified about the cancellation.");
-      });
-    }
-
-    // Messaging: send message (simulate response)
-    document.addEventListener('click', function(e) {
-      if (e.target.closest('#btn-send-message')) {
-        sendMessage();
-      }
-    });
-    
-    // Prescription form submission
-    if (DOM.btnSubmitPrescription) {
-      DOM.btnSubmitPrescription.addEventListener('click', function() {
-        addPrescription();
-      });
-    }
   }
 
-  // Tab switching
-  function switchTab(tabName) {
-    DOM.tabs.forEach(tab => {
-      tab.classList.toggle('active', tab.dataset.tab === tabName);
-    });
-    DOM.contents.forEach(content => {
-      content.classList.toggle('active', content.id === `${tabName}-content`);
-    });
-    const tabText = document.querySelector(`[data-tab="${tabName}"]`);
-    if (tabText) {
-      DOM.pageTitle.textContent = tabText.textContent.trim();
-    }
-    if (tabName === 'prescription-history') {
-      renderPrescriptionHistory();
-    }
-    if (tabName === 'profile') {
-      renderProfile();
-    }
+  async function loadAppointments() {
+      const [today, upcoming] = await Promise.all([
+          fetchData('/rdv-aujourdhui/'),
+          fetchData('/rdv-prochains/')
+      ]);
+      
+      state.appointments = {
+          today: processAppointments(today.results),
+          upcoming: processAppointments(upcoming.results)
+      };
+      renderAppointments();
   }
 
-  // Render all sections
-  function renderAll() {
-    renderDashboard();
-    renderAppointments();
-    renderMessages();
-    renderPrescriptionHistory();
-    renderProfile();
+  async function loadPrescriptions() {
+      const data = await fetchData('/historique-prescriptions/');
+      state.prescriptions = data.results.map(p => ({
+          id: p.id,
+          patient: p.date.patient,
+          date: p.date.date,
+          diagnostic: p.diagnostique,
+          traitement: p.traitment
+      }));
+      renderPrescriptions();
   }
 
-  // Render Dashboard (today's appointments summary)
-  function renderDashboard() {
-    if (DOM.todayAppointmentsContainer) {
-      if (state.todaysAppointments.length > 0) {
-        DOM.todayAppointmentsContainer.innerHTML = state.todaysAppointments.map(app => `
-          <p><strong>${app.patientName}</strong> - ${app.specialty}</p>
-          <p><i class="far fa-calendar-alt"></i> ${formatDate(app.date)} at ${app.time}</p>
-          <button class="btn-delete" data-id="${app.id}">Cancel</button>
-        `).join('');
-      } else {
-        DOM.todayAppointmentsContainer.innerHTML = `<p>No appointments for today.</p>`;
-      }
-    }
-  }
-
-  // Render Appointments List
-  function renderAppointments() {
-    if (DOM.appointmentListContainer) {
-      if (state.todaysAppointments.length > 0) {
-        DOM.appointmentListContainer.innerHTML = state.todaysAppointments.map(app => `
-          <div class="appointment-item">
-            <div class="appointment-info">
-              <h4>${app.patientName} - ${app.specialty}</h4>
-              <p><i class="far fa-calendar-alt"></i> ${formatDate(app.date)} at ${app.time}</p>
-              <p><i class="far fa-comment"></i> ${app.reason}</p>
-            </div>
-            <div class="appointment-actions">
-              <button class="btn-view" data-id="${app.id}">View</button>
-              <button class="btn-delete" data-id="${app.id}">Cancel</button>
-            </div>
-          </div>
-        `).join('');
-      } else {
-        DOM.appointmentListContainer.innerHTML = `<p>No appointments scheduled for today.</p>`;
-      }
-    }
-  }
-
-  // Render Messages (simple simulation)
-  function renderMessages() {
-    if (DOM.chatMessages) {
-      DOM.chatMessages.innerHTML = state.messages.map(msg => `
-        <div class="message ${msg.from === 'doctor' ? 'doctor' : 'patient'}">
-          <p>${msg.text}</p>
-          <span>${msg.time}</span>
-        </div>
-      `).join('');
-      DOM.chatMessages.scrollTop = DOM.chatMessages.scrollHeight;
-    }
-  }
-
-  // Send a message (simulate response)
-  function sendMessage() {
-    const text = DOM.messageInput.value.trim();
-    if (!text) {
-      alert("Please type a message.");
-      return;
-    }
-    const message = {
-      text: text.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
-      from: 'doctor',
-      time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-    };
-    state.messages.push(message);
-    DOM.messageInput.value = '';
-    renderMessages();
-    // Simulate a patient reply after 1.5 seconds
-    setTimeout(() => {
-      state.messages.push({
-        text: 'Patient: Thank you, doctor!',
-        from: 'patient',
-        time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-      });
+  async function loadMessages() {
+      const data = await fetchData('/boite-reception/');
+      state.messages = data.results.map(m => ({
+          id: m.id,
+          content: m.contenu,
+          sender: m.envoyeur,
+          date: m.date_message,
+          read: m.lu
+      }));
       renderMessages();
-    }, 1500);
   }
 
-  // Render Prescription History
-  function renderPrescriptionHistory() {
-    if (DOM.prescriptionHistoryList) {
-      if (state.prescriptions.length > 0) {
-        DOM.prescriptionHistoryList.innerHTML = state.prescriptions.map(pres => `
-          <div class="prescription-item">
-            <h4>${pres.patientName} - ${pres.medication} (${pres.dosage})</h4>
-            <p>${pres.instructions}</p>
-            <p><small>${formatDate(pres.date)}</small></p>
-          </div>
-        `).join('');
-      } else {
-        DOM.prescriptionHistoryList.innerHTML = `<p>No prescriptions have been issued yet.</p>`;
+  async function loadPatients() {
+      const data = await fetchData('/patients/');
+      state.patients = data.results;
+      renderPatients();
+  }
+
+  // *******************************************
+  // Fonctions de rendu
+  // *******************************************
+
+  function renderAppointments() {
+      // Rendez-vous du jour
+      DOM.appointmentList.innerHTML = state.appointments.today
+          .map(appointment => `
+              <div class="appointment-item">
+                  <div class="appointment-info">
+                      <h4>${appointment.patientName}</h4>
+                      <p class="appointment-meta">
+                          <span><i class="fas fa-calendar-day"></i> ${appointment.date}</span>
+                          <span><i class="fas fa-clock"></i> ${appointment.time}</span>
+                      </p>
+                      <p class="appointment-reason">${appointment.reason}</p>
+                  </div>
+                  <div class="appointment-actions">
+                      <button class="btn-view" data-id="${appointment.id}">
+                          <i class="fas fa-eye"></i> Détails
+                      </button>
+                      <button class="btn-cancel" data-id="${appointment.id}">
+                          <i class="fas fa-times"></i> Annuler
+                      </button>
+                  </div>
+              </div>
+          `).join('');
+
+      // Rendez-vous à venir
+      // ... code similaire ...
+  }
+
+  function renderPrescriptions() {
+      DOM.prescriptionList.innerHTML = state.prescriptions
+          .map(prescription => `
+              <div class="prescription-item">
+                  <div class="prescription-header">
+                      <h4>${prescription.patient.user.last_name} ${prescription.patient.user.first_name}</h4>
+                      <span class="prescription-date">${formatDate(prescription.date)}</span>
+                  </div>
+                  <div class="prescription-body">
+                      <p><strong>Diagnostic:</strong> ${prescription.diagnostic}</p>
+                      <p><strong>Traitement:</strong> ${prescription.traitement}</p>
+                  </div>
+              </div>
+          `).join('');
+  }
+
+  function renderMessages() {
+      DOM.messageList.innerHTML = state.messages
+          .map(message => `
+              <div class="${message.sender === state.currentUser.id ? 'message doctor' : 'message patient'}">
+                  <div class="message-content">
+                      <p>${message.content}</p>
+                      <span class="message-time">${formatDateTime(message.date)}</span>
+                  </div>
+              </div>
+          `).join('');
+  }
+
+  function renderPatients() {
+      DOM.patientList.innerHTML = state.patients
+          .map(patient => `
+              <div class="patient-card" data-id="${patient.id}">
+                  <h4>${patient.user.last_name} ${patient.user.first_name}</h4>
+                  <p>CIN: ${patient.cin}</p>
+              </div>
+          `).join('');
+  }
+
+  // *******************************************
+  // Gestion des interactions
+  // *******************************************
+
+  async function handleAppointmentCancel(appointmentId) {
+      try {
+          await fetch(`${API_BASE_URL}/annuler-rdv/${appointmentId}/`, {
+              method: 'POST',
+              headers: getAuthHeaders()
+          });
+          await loadAppointments();
+          showSuccess('Rendez-vous annulé avec succès');
+      } catch (error) {
+          showError('Échec de l\'annulation');
       }
-    }
   }
 
-  // Render Profile
+  async function handleMessageSend() {
+      const content = DOM.messageInput.value.trim();
+      if (!content) return;
+
+      try {
+          await fetch(`${API_BASE_URL}/envoyer-message/`, {
+              method: 'POST',
+              headers: getAuthHeaders('json'),
+              body: JSON.stringify({
+                  receiver_email: state.currentPatient?.user?.email,
+                  message_content: content,
+                  objet: "Nouveau message"
+              })
+          });
+          
+          DOM.messageInput.value = '';
+          await loadMessages();
+      } catch (error) {
+          showError('Échec de l\'envoi du message');
+      }
+  }
+
+  // *******************************************
+  // Utilitaires
+  // *******************************************
+
+  function getAuthHeaders(contentType = null) {
+      const headers = {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+      };
+      if (contentType === 'json') {
+          headers['Content-Type'] = 'application/json';
+      }
+      return headers;
+  }
+
+  function formatDateTime(isoString) {
+      const options = {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+      };
+      return new Date(isoString).toLocaleDateString('fr-FR', options);
+  }
+
+  function showSuccess(message) {
+      showNotification(message, 'success');
+  }
+
+  function showError(message) {
+      showNotification(message, 'error');
+  }
+
+  function showNotification(message, type) {
+      const notification = document.createElement('div');
+      notification.className = `notification ${type}`;
+      notification.innerHTML = `
+          <i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}-circle"></i>
+          ${message}
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 3000);
+  }
+
+  // *******************************************
+  // Initialisation
+  // *******************************************
+
+  function setupEventListeners() {
+      // Navigation
+      document.querySelectorAll('.sidebar nav ul li').forEach(tab => {
+          tab.addEventListener('click', () => {
+              const tabName = tab.dataset.tab;
+              switchTab(tabName);
+          });
+      });
+
+      // Messages
+      document.getElementById('btn-send-message').addEventListener('click', handleMessageSend);
+      DOM.messageInput.addEventListener('keypress', e => {
+          if (e.key === 'Enter') handleMessageSend();
+      });
+
+      // Patients
+      document.querySelectorAll('.patient-card').forEach(card => {
+          card.addEventListener('click', () => {
+              const patientId = card.dataset.id;
+              state.currentPatient = state.patients.find(p => p.id === patientId);
+              loadMessages();
+          });
+      });
+  }
+
+  function switchTab(tabName) {
+      // Logique de changement d'onglet
+      document.querySelectorAll('.content').forEach(content => {
+          content.classList.toggle('active', content.id === `${tabName}-content`);
+      });
+  }
+
+  function setupUI() {
+      switchTab('dashboard');
+      renderProfile();
+  }
+
   function renderProfile() {
-    if (DOM.profileDetails) {
-      const prof = state.profile;
-      DOM.profileDetails.innerHTML = `
-        <p><strong>Name:</strong> ${prof.name}</p>
-        <p><strong>Specialty:</strong> ${prof.specialty}</p>
-        <p><strong>Email:</strong> ${prof.email}</p>
-        <p><strong>Phone:</strong> ${prof.phone}</p>
-        <p><strong>Office:</strong> ${prof.office}</p>
+      document.querySelector('.profile-details').innerHTML = `
+          <div class="profile-section">
+              <h3><i class="fas fa-user-md"></i> Informations</h3>
+              <p><strong>Nom:</strong> ${state.currentUser.user.last_name} ${state.currentUser.user.first_name}</p>
+              <p><strong>Spécialité:</strong> ${state.currentUser.specialite}</p>
+              <p><strong>Email:</strong> ${state.currentUser.user.email}</p>
+          </div>
       `;
-    }
   }
 
-  // Appointment Modal - for viewing details
-  function viewAppointment(id) {
-    const app = state.todaysAppointments.find(a => a.id === id);
-    if (app) {
-      DOM.modalTitle.textContent = "Appointment Details";
-      DOM.modalBody.innerHTML = `
-        <p><strong>Patient:</strong> ${app.patientName}</p>
-        <p><strong>Specialty:</strong> ${app.specialty}</p>
-        <p><strong>Date:</strong> ${formatDate(app.date)}</p>
-        <p><strong>Time:</strong> ${app.time}</p>
-        <p><strong>Reason:</strong> ${app.reason}</p>
-      `;
-      // Optionally, attach the appointment id for cancellation
-      DOM.modalCancelBtn.dataset.id = app.id;
-      DOM.appointmentModal.classList.add('active');
-    } else {
-      alert("Appointment not found.");
-    }
-  }
-
-  // Cancel an appointment
-  function cancelAppointment(id) {
-    state.todaysAppointments = state.todaysAppointments.filter(a => a.id !== id);
-    renderDashboard();
-    renderAppointments();
-  }
-
-  // Add a Prescription
-  function addPrescription() {
-    const patientName = document.getElementById('patient-name').value.trim();
-    const medication = document.getElementById('medication').value.trim();
-    const dosage = document.getElementById('dosage').value.trim();
-    const instructions = document.getElementById('instructions').value.trim();
-    if (!patientName || !medication || !dosage || !instructions) {
-      alert("Please fill in all the fields.");
-      return;
-    }
-    const newPrescription = {
-      patientName,
-      medication,
-      dosage,
-      instructions,
-      date: new Date().toISOString()
-    };
-    state.prescriptions.push(newPrescription);
-    alert("Prescription submitted successfully.");
-    // Clear the form fields
-    document.getElementById('patient-name').value = "";
-    document.getElementById('medication').value = "";
-    document.getElementById('dosage').value = "";
-    document.getElementById('instructions').value = "";
-    renderPrescriptionHistory();
-  }
-
-  // Helper: format date string
-  function formatDate(dateString) {
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString('en-GB', options);
-  }
+  // Démarrage de l'application
+  initializeApp();
 });
