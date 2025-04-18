@@ -1,53 +1,46 @@
 from django.conf import settings
-from django.shortcuts import get_object_or_404
+from django.shortcuts import render
+from .models import *
+from auth_app.models import User
+from .serializers import *
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
+from datetime import date
+from patient_app.serializers import RendezVousSerializer 
 from django.utils import timezone
-from datetime import datetime, date
-from .models import Message, Prescription
-from auth_app.models import User
-from patient_app.models import RendezVous
-from .serializers import PrescriptionSerializer, MessageSerializer
-from patient_app.serializers import RendezVousSerializer
-from django.db.models import Q
+from datetime import datetime
 
 def update_rendez_vous_etat():
     """Met à jour automatiquement l'état des rendez-vous en fonction de la date."""
+    maintenant = datetime.now()
     RendezVous.objects.filter(
         etat='planifié', 
-        date__lt=timezone.now()
+        date__lt = maintenant
     ).update(etat='completé')
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def docteur_cancel_rendezvous(request, rendez_vous_id):
-    """
-    Annule un rendez-vous et notifie le patient par email
-    """
-    rendez_vous = get_object_or_404(RendezVous, id=rendez_vous_id, docteur__user=request.user)
-    
-    try:
+def docteurCancelRendezvousView(request, rendez_vous_id):
+    try:    
+        rendez_vous = get_object_or_404(RendezVous, id=rendez_vous_id)
         rendez_vous.etat = 'annulé'
         rendez_vous.save()
-        
-        # Envoi d'email
-        subject = f"Annulation de votre rendez-vous du {rendez_vous.date.strftime('%d/%m/%Y')}"
+        subject = "Annulation d'un Rendez vous"
         message = f"""
-        Bonjour {rendez_vous.patient.user.get_full_name()},
+        Bonjour {rendez_vous.patient.user.last_name.upper()},
 
-        Votre rendez-vous avec le Dr. {rendez_vous.docteur.user.get_full_name()} 
-        prévu le {rendez_vous.date.strftime('%d/%m/%Y à %H:%M')} a été annulé.
+        Votre Rendez-vous avec Dr.{rendez_vous.docteur.user.last_name.upper()} à {rendez_vous.date} a été annulé .
 
-        Pour plus d'informations ou reprogrammer un rendez-vous, 
-        veuillez contacter le secrétariat.
+        Pour plus de details ,veuillez contacter le docteur, ou vous pouvez simplement reserver une autre date.
 
+        on s'excuse et on vous souhaite une bonne journée.
         Cordialement,
         Équipe NM_LAB
         """
-        
         send_mail(
             subject=subject,
             message=message,
@@ -55,174 +48,106 @@ def docteur_cancel_rendezvous(request, rendez_vous_id):
             recipient_list=[rendez_vous.patient.user.email],
             fail_silently=False,
         )
-        
-        return Response({
-            "success": True,
-            "message": "Rendez-vous annulé avec succès",
-            "patient_notified": True
-        }, status=status.HTTP_200_OK)
-        
     except Exception as e:
         return Response({
-            "success": False,
-            "message": f"Erreur lors de l'annulation: {str(e)}",
-            "patient_notified": False
+            "message":f"error : {str(e)}"
         }, status=status.HTTP_400_BAD_REQUEST)
+    return Response({
+        "message": "rendez-vous annulé avec succées et le patient est informé dans sa boit email"
+    }, status=status.HTTP_200_OK)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def upcoming_rendezvous(request):
-    """
-    Liste les rendez-vous à venir pour le docteur connecté
-    """
+def upcomingRendezvousView(request):
     update_rendez_vous_etat()
-    
+    now = timezone.now()
     appointments = RendezVous.objects.filter(
-        docteur__user=request.user,
-        date__gte=timezone.now(),
-        etat='planifié'
-    ).select_related('patient__user', 'docteur__user')
-    
-    serializer = RendezVousSerializer(appointments, many=True)
-    return Response({
-        "count": appointments.count(),
-        "results": serializer.data
-    })
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def today_rendezvous(request):
-    """
-    Liste les rendez-vous du jour pour le docteur connecté
-    """
-    update_rendez_vous_etat()
-    
-    today_start = timezone.now().replace(hour=0, minute=0, second=0)
-    today_end = today_start.replace(hour=23, minute=59, second=59)
-    
-    appointments = RendezVous.objects.filter(
-        docteur__user=request.user,
-        date__range=(today_start, today_end),
-        etat='planifié'
-    ).select_related('patient__user')
-    
-    if not appointments.exists():
-        return Response({
-            "message": "Aucun rendez-vous programmé aujourd'hui",
-            "count": 0
-        }, status=status.HTTP_200_OK)
-        
-    serializer = RendezVousSerializer(appointments, many=True)
-    return Response({
-        "count": appointments.count(),
-        "results": serializer.data
-    })
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def write_prescription(request):
-    """
-    Crée une nouvelle prescription avec validation avancée
-    """
-    serializer = PrescriptionSerializer(
-        data=request.data,
-        context={'request': request}
+        date__gte=now,   
+        etat='planifié' 
     )
+    serialized_data = RendezVousSerializer(appointments, many=True).data
+    return Response(serialized_data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def todayRendezVousView(request):
+    update_rendez_vous_etat()
+    today = date.today()
+    today_rendezvous = RendezVous.objects.filter(date__date=today , docteur__user = request.user)
+    serializer = RendezVousSerializer(today_rendezvous, many=True)
     
-    if serializer.is_valid():
-        prescription = serializer.save()
+    if not serializer.data:
         return Response({
-            "success": True,
-            "prescription_id": prescription.id,
-            "message": "Prescription enregistrée avec succès"
-        }, status=status.HTTP_201_CREATED)
-        
-    return Response({
-        "success": False,
-        "errors": serializer.errors
-    }, status=status.HTTP_400_BAD_REQUEST)
+            "message": "pas de rendez-vous aujourd'hui"
+        }, status=status.HTTP_404_NOT_FOUND)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def send_message(request):
-    """
-    Envoie un message entre utilisateurs avec validation
-    """
-    required_fields = ['receiver_email', 'message_content', 'objet']
-    if not all(field in request.data for field in required_fields):
-        return Response({
-            "success": False,
-            "message": "Tous les champs sont obligatoires"
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    try:
-        receiver = User.objects.get(email=request.data['receiver_email'])
-    except User.DoesNotExist:
-        return Response({
-            "success": False,
-            "message": "Destinataire introuvable"
-        }, status=status.HTTP_404_NOT_FOUND)
-    
-    message_data = {
-        'objet': request.data['objet'],
-        'envoyeur': request.user.id,
-        'destinataire': receiver.id,
-        'contenu': request.data['message_content']
-    }
-    
-    serializer = MessageSerializer(data=message_data)
+def writePrescriptionView(request):
+    serializer = PrescriptionSerializer(data = request.data)
     if serializer.is_valid():
-        message = serializer.save()
+        serializer.save()
         return Response({
-            "success": True,
-            "message_id": message.id,
-            "data": serializer.data
+            "message":"prescription ecrite avec succées"
         }, status=status.HTTP_201_CREATED)
-        
-    return Response({
-        "success": False,
-        "errors": serializer.errors
-    }, status=status.HTTP_400_BAD_REQUEST)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def message_inbox(request):
-    """
-    Récupère la boîte de messages de l'utilisateur
-    """
-    messages = Message.objects.filter(
-        Q(envoyeur=request.user) | Q(destinataire=request.user)
-    ).order_by('-date_message').select_related('envoyeur', 'destinataire')
-    
-    serializer = MessageSerializer(messages, many=True)
-    return Response({
-        "count": messages.count(),
-        "unread": messages.filter(lu=False, destinataire=request.user).count(),
-        "results": serializer.data
-    })
 
-@api_view(['GET'])
+def writeMessageView(request):
+    sender = request.user
+    receiver_email = request.data.get('receiver_email')
+    message_content = request.data.get('message_content')
+    objet = request.data.get('objet')
+    if not receiver_email or not message_content or not objet:
+        return Response({"message": "veuiller remplire les champs."}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        receiver = User.objects.get(email=receiver_email)
+    except User.DoesNotExist:
+        return Response({"message": "destinataire non trouvable."}, status=status.HTTP_404_NOT_FOUND)
+    message_data = {
+        'objet': objet,
+        'envoie': sender.id,
+        'reception': receiver.id,
+        'message_content': message_content
+    }
+    serializer = MessageSerializer(message_data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors , status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def patient_prescription_history(request, cin):
-    """
-    Historique des prescriptions pour un patient donné
-    """
-    update_rendez_vous_etat()
-    
-    prescriptions = Prescription.objects.filter(
-        date__patient__cin=cin,
-        date__docteur__user=request.user
-    ).select_related('date__patient__user', 'date__docteur__user')
-    
-    if not prescriptions.exists():
+def seeMessagesView(request):
+    messages_envoyes = Message.objects.filter(envoie = request.user)
+    messages_reçu = Message.objects.filter(reception = request.user)
+    list_messages = messages_envoyes.union(messages_reçu).order_by('-date_message')
+    if list_messages.exists():
+        serializer = MessageSerializer(list_messages, many = True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    else:
         return Response({
-            "message": "Aucune prescription trouvée pour ce patient",
-            "count": 0
-        }, status=status.HTTP_200_OK)
-        
-    serializer = PrescriptionSerializer(prescriptions, many=True)
+            "message": "aucun message"
+        }, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def historicPrescriptionView(request, cin):
+    update_rendez_vous_etat()
+    rendez_vous = Prescription.objects.filter(date__patient__cin = cin)
+    if rendez_vous.exists() :
+        serializer = PrescriptionSerializer(rendez_vous, many = True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     return Response({
-        "patient_cin": cin,
-        "count": prescriptions.count(),
-        "results": serializer.data
+        "message":"aucun prescriptions encore pour cet patient"
     })
+@api_view(['GET'])
+def list_messages(request):
+    messages = Message.objects.all()
+    serializer = MessageSerializer(messages, many=True)
+    return Response(serializer.data)
