@@ -44,5 +44,3 @@ class PrescriptionSerializer(serializers.ModelSerializer):
            date=rdv,
            **validated_data
        )
-       return prescription
-
