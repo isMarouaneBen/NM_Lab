@@ -40,11 +40,12 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("API Response:", result);
 
             if (result.data?.user?.role) {
+                localStorage.setItem('token', result.token);
                 const role = result.data.user.role.toLowerCase();
                 if (role === 'patient') {
-                    window.location.href = 'profil-docteur.html';
+                    window.location.href = 'patient.html';
                 } else if (role === 'docteur') {
-                    window.location.href = 'indexDocteur.html';
+                    window.location.href = 'docteur.html';
                 } else {
                     window.location.href = 'register.html';
                 }
@@ -70,4 +71,3 @@ document.addEventListener('DOMContentLoaded', function() {
         window.scrollTo(0, 0);
     }
 });
-console.log(response.json());

@@ -14,7 +14,7 @@ def monthlyPatientView(request):
     this_month = datetime.now().month
     this_year = datetime.now().year
     try :
-        monthly_patient = User.objects.filter(ROLES = 'patient' , CREATED_WHEN__month = this_month , CREATED_WHEN__year = this_year)
+        monthly_patient = User.objects.filter(role = 'patient' , created_when__month = this_month , created_when__year = this_year)
         if monthly_patient.exists() :
             monthly_patient_count_data = monthly_patient.count()
             return Response( {

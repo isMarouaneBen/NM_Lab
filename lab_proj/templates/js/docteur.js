@@ -1,4 +1,49 @@
 document.addEventListener('DOMContentLoaded', function() {
+  const logoutbutton = document.querySelector(".btn-logout");
+  if (!logoutbutton) {
+    console.error("Logout button not found in the DOM");
+    return;
+  }
+  
+  console.log("Logout button found:", logoutbutton);
+  
+  // Add the event listener with debug logging
+  logoutbutton.addEventListener('click', function() {
+    console.log("Logout button clicked");
+    
+    // Check if token exists
+    const token = localStorage.getItem('token');
+    console.log("Token found:", token);
+    
+    async function logouthandling() {
+      try {
+        const response = await fetch("http://127.0.0.1:8000/users/logout/", {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json'
+          },
+        });
+        
+        console.log("Server response status:", response.status);
+        const data = await response.json();
+        console.log("Server response data:", data);
+        
+        if (response.ok) {
+          console.log("Logout successful, clearing token and redirecting...");
+          localStorage.removeItem('authToken');
+          window.location.href = 'login.html';
+        } else {
+          console.error('Error:', data.detail || 'Logout failed');
+          console.log(token);
+        }
+      } catch (error) {
+        console.error('Error during logout:', error.message);
+      }
+    }
+    
+    logouthandling();
+  });
   // Global state for the doctor dashboard
   const state = {
     // Today's appointments for the doctor

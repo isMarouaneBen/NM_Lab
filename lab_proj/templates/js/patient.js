@@ -1,5 +1,44 @@
 document.addEventListener('DOMContentLoaded', function() {
-  // État global de l'application
+  const logoutbutton = document.querySelector(".btn-logout")
+  
+  // Add the event listener with debug logging
+  logoutbutton.addEventListener('click', function() {
+    console.log("Logout button clicked");
+    
+    // Check if token exists
+    const token = localStorage.getItem('token');
+    console.log("Token found:", token);
+    
+    async function logouthandling() {
+      try {
+        const response = await fetch("http://127.0.0.1:8000/users/logout/", {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json'
+          },
+        });
+        
+        console.log("Server response status:", response.status);
+        const data = await response.json();
+        console.log("Server response data:", data);
+        
+        if (response.ok) {
+          console.log("Logout successful, clearing token and redirecting...");
+          localStorage.removeItem('authToken');
+          window.location.href = 'login.html';
+        } else {
+          console.error('Error:', data.detail || 'Logout failed');
+          console.log(token);
+        }
+      } catch (error) {
+        console.error('Error during logout:', error.message);
+      }
+    }
+    
+    logouthandling();
+  });
+
   const state = {
     upcomingAppointments: [
       {
