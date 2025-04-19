@@ -1,42 +1,14 @@
-document.addEventListener('DOMContentLoaded', function() {
-  // Global state for the doctor dashboard
+const API_BASE_URL = '/api/doctor/';
+const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]')?.value || "{{ csrf_token }}";
+let currentDoctorId = null;
+
+document.addEventListener('DOMContentLoaded', async function() {
+  // Global state
   const state = {
-    // Today's appointments for the doctor
-    todaysAppointments: [
-      {
-        id: 1,
-        patientName: 'Imane Bouzid',
-        specialty: 'Cardiology',
-        date: '2023-06-15',
-        time: '09:30',
-        reason: 'Routine check-up'
-      },
-      {
-        id: 2,
-        patientName: 'Leila Bensalem',
-        specialty: 'Cardiology',
-        date: '2023-06-15',
-        time: '10:15',
-        reason: 'Follow-up consultation'
-      }
-    ],
-    prescriptions: [
-      {
-        patientName: 'Jane Doe',
-        medication: 'Atorvastatin',
-        dosage: '20mg',
-        instructions: 'Take one tablet daily after dinner',
-        date: '2023-06-10'
-      }
-    ],
+    todaysAppointments: [],
+    prescriptions: [],
     messages: [],
-    profile: {
-      name: 'Dr. Nassima Maarouf',
-      specialty: 'Cardiology',
-      email: 'dr.NassimaMaa@gmail.com',
-      phone: '0687654321',
-      office: 'Room 101, NMLab'
-    }
+    profile: null
   };
 
   // DOM Elements
@@ -44,103 +16,192 @@ document.addEventListener('DOMContentLoaded', function() {
     tabs: document.querySelectorAll('.sidebar nav ul li'),
     contents: document.querySelectorAll('.content'),
     pageTitle: document.getElementById('page-title'),
-    // Dashboard
     todayAppointmentsContainer: document.querySelector('.today-appointments'),
-    // Appointments
     appointmentListContainer: document.querySelector('.appointment-list'),
-    // Messaging
     chatMessages: document.getElementById('chat-messages'),
     messageInput: document.getElementById('message-text'),
-    // Prescription form
     btnSubmitPrescription: document.getElementById('btn-submit-prescription'),
-    // Prescription History
     prescriptionHistoryList: document.querySelector('.prescription-history-list'),
-    // Profile details
     profileDetails: document.querySelector('.profile-details'),
-    // Modal
     appointmentModal: document.getElementById('appointment-modal'),
     modalTitle: document.getElementById('modal-title'),
     modalBody: document.getElementById('modal-body'),
     modalCancelBtn: document.getElementById('modal-cancel-btn'),
-    closeModalBtns: document.querySelectorAll('.close-modal, .btn-close-modal')
+    closeModalBtns: document.querySelectorAll('.close-modal, .btn-close-modal'),
+    patientNameInput: document.getElementById('patient-name'),
+    medicationInput: document.getElementById('medication'),
+    dosageInput: document.getElementById('dosage'),
+    instructionsInput: document.getElementById('instructions'),
+    receiverEmailInput: document.getElementById('receiver-email'),
+    messageSubjectInput: document.getElementById('message-subject')
   };
 
-  // Initialization
-  initEventListeners();
-  renderAll();
+  // Initialize dashboard
+  try {
+    await loadDoctorProfile();
+    await Promise.all([
+      loadTodaysAppointments(),
+      loadPrescriptionHistory(),
+      loadMessages()
+    ]);
+    initEventListeners();
+    renderAll();
+  } catch (error) {
+    console.error("Initialization error:", error);
+    showAlert("Failed to initialize dashboard", "error");
+  }
 
-  function initEventListeners() {
-    // Tab switching
-    DOM.tabs.forEach(tab => {
-      tab.addEventListener('click', () => switchTab(tab.dataset.tab));
-    });
+  // API Functions
+  async function loadDoctorProfile() {
+    try {
+      const response = await fetch(`${API_BASE_URL}profile/`, {
+        headers: { 'X-CSRFToken': CSRF_TOKEN }
+      });
+      
+      if (!response.ok) throw new Error(await response.text());
+      
+      state.profile = await response.json();
+      currentDoctorId = state.profile.id;
+    } catch (error) {
+      console.error("Error loading profile:", error);
+      throw error;
+    }
+  }
 
-    // Delegate appointment action buttons (View/Cancel)
-    document.addEventListener('click', function(e) {
-      if (e.target.closest('.btn-delete')) {
-        const id = parseInt(e.target.closest('.btn-delete').dataset.id);
-        if (confirm("Are you sure you want to cancel this appointment? The patient will be notified.")) {
-          cancelAppointment(id);
-          alert("The patient has been notified about the cancellation.");
+  async function loadTodaysAppointments() {
+    try {
+      const response = await fetch(`${API_BASE_URL}today-rendezvous/`, {
+        headers: { 'X-CSRFToken': CSRF_TOKEN }
+      });
+      
+      if (!response.ok) throw new Error(await response.text());
+      
+      state.todaysAppointments = (await response.json()).map(rdv => ({
+        id: rdv.id,
+        patientName: rdv.patient_name,
+        specialty: rdv.specialty,
+        date: rdv.date,
+        time: rdv.time,
+        reason: rdv.reason || "Consultation"
+      }));
+    } catch (error) {
+      console.error("Error loading appointments:", error);
+      throw error;
+    }
+  }
+
+  async function cancelAppointment(id) {
+    try {
+      if (!confirm("Are you sure you want to cancel this appointment?")) return;
+      
+      const response = await fetch(`${API_BASE_URL}cancel-rendezvous/${id}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': CSRF_TOKEN,
+          'Content-Type': 'application/json'
         }
-      }
-      if (e.target.closest('.btn-view')) {
-        const id = parseInt(e.target.closest('.btn-view').dataset.id);
-        viewAppointment(id);
-      }
-    });
-
-    // Modal close buttons
-    DOM.closeModalBtns.forEach(btn => {
-      btn.addEventListener('click', () => DOM.appointmentModal.classList.remove('active'));
-    });
-
-    // Modal cancel appointment button
-    if (DOM.modalCancelBtn) {
-      DOM.modalCancelBtn.addEventListener('click', function() {
-        const id = parseInt(this.dataset.id);
-        cancelAppointment(id);
-        DOM.appointmentModal.classList.remove('active');
-        alert("The patient has been notified about the cancellation.");
       });
-    }
-
-    // Messaging: send message (simulate response)
-    document.addEventListener('click', function(e) {
-      if (e.target.closest('#btn-send-message')) {
-        sendMessage();
-      }
-    });
-    
-    // Prescription form submission
-    if (DOM.btnSubmitPrescription) {
-      DOM.btnSubmitPrescription.addEventListener('click', function() {
-        addPrescription();
-      });
+      
+      if (!response.ok) throw new Error(await response.text());
+      
+      state.todaysAppointments = state.todaysAppointments.filter(a => a.id !== id);
+      showAlert("Appointment cancelled successfully", "success");
+      renderDashboard();
+      renderAppointments();
+    } catch (error) {
+      console.error("Cancellation error:", error);
+      showAlert(error.message, "error");
     }
   }
 
-  // Tab switching
-  function switchTab(tabName) {
-    DOM.tabs.forEach(tab => {
-      tab.classList.toggle('active', tab.dataset.tab === tabName);
-    });
-    DOM.contents.forEach(content => {
-      content.classList.toggle('active', content.id === `${tabName}-content`);
-    });
-    const tabText = document.querySelector(`[data-tab="${tabName}"]`);
-    if (tabText) {
-      DOM.pageTitle.textContent = tabText.textContent.trim();
-    }
-    if (tabName === 'prescription-history') {
-      renderPrescriptionHistory();
-    }
-    if (tabName === 'profile') {
-      renderProfile();
+  async function addPrescription() {
+    const formData = {
+      patient_name: DOM.patientNameInput.value.trim(),
+      medication: DOM.medicationInput.value.trim(),
+      dosage: DOM.dosageInput.value.trim(),
+      instructions: DOM.instructionsInput.value.trim()
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}write-prescription/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': CSRF_TOKEN,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (!response.ok) throw new Error(await response.text());
+      
+      showAlert("Prescription saved successfully", "success");
+      await loadPrescriptionHistory();
+      resetForm('prescription-form');
+    } catch (error) {
+      console.error("Prescription error:", error);
+      showAlert(error.message, "error");
     }
   }
 
-  // Render all sections
+  async function loadPrescriptionHistory() {
+    try {
+      const response = await fetch(`${API_BASE_URL}historic-prescriptions/`, {
+        headers: { 'X-CSRFToken': CSRF_TOKEN }
+      });
+      
+      if (!response.ok) throw new Error(await response.text());
+      
+      state.prescriptions = await response.json();
+    } catch (error) {
+      console.error("Error loading prescriptions:", error);
+      throw error;
+    }
+  }
+
+  async function sendMessage() {
+    const messageData = {
+      receiver_email: DOM.receiverEmailInput.value.trim(),
+      message_content: DOM.messageInput.value.trim(),
+      objet: DOM.messageSubjectInput.value.trim()
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}write-message/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': CSRF_TOKEN,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(messageData)
+      });
+
+      if (!response.ok) throw new Error(await response.text());
+      
+      showAlert("Message sent successfully", "success");
+      DOM.messageInput.value = '';
+      await loadMessages();
+    } catch (error) {
+      console.error("Message error:", error);
+      showAlert(error.message, "error");
+    }
+  }
+
+  async function loadMessages() {
+    try {
+      const response = await fetch(`${API_BASE_URL}see-messages/`, {
+        headers: { 'X-CSRFToken': CSRF_TOKEN }
+      });
+      
+      if (!response.ok) throw new Error(await response.text());
+      
+      state.messages = await response.json();
+    } catch (error) {
+      console.error("Error loading messages:", error);
+      throw error;
+    }
+  }
+
+  // Render Functions
   function renderAll() {
     renderDashboard();
     renderAppointments();
@@ -149,199 +210,192 @@ document.addEventListener('DOMContentLoaded', function() {
     renderProfile();
   }
 
-  // Render Dashboard (today's appointments summary)
   function renderDashboard() {
-    if (DOM.todayAppointmentsContainer) {
-      if (state.todaysAppointments.length > 0) {
-        DOM.todayAppointmentsContainer.innerHTML = state.todaysAppointments.map(app => `
-          <p><strong>${app.patientName}</strong> - ${app.specialty}</p>
-          <p><i class="far fa-calendar-alt"></i> ${formatDate(app.date)} at ${app.time}</p>
-          <button class="btn-delete" data-id="${app.id}">Cancel</button>
-        `).join('');
-      } else {
-        DOM.todayAppointmentsContainer.innerHTML = `<p>No appointments for today.</p>`;
-      }
-    }
-  }
-
-  // Render Appointments List
-  function renderAppointments() {
-    if (DOM.appointmentListContainer) {
-      if (state.todaysAppointments.length > 0) {
-        DOM.appointmentListContainer.innerHTML = state.todaysAppointments.map(app => `
-          <div class="appointment-item">
-            <div class="appointment-info">
-              <h4>${app.patientName} - ${app.specialty}</h4>
-              <p><i class="far fa-calendar-alt"></i> ${formatDate(app.date)} at ${app.time}</p>
-              <p><i class="far fa-comment"></i> ${app.reason}</p>
-            </div>
-            <div class="appointment-actions">
+    if (!DOM.todayAppointmentsContainer) return;
+    
+    DOM.todayAppointmentsContainer.innerHTML = state.todaysAppointments.length > 0
+      ? state.todaysAppointments.map(app => `
+          <div class="appointment-card">
+            <h4>${app.patientName}</h4>
+            <p>${app.specialty}</p>
+            <time>${formatDate(app.date)} ${app.time}</time>
+            <div class="actions">
               <button class="btn-view" data-id="${app.id}">View</button>
               <button class="btn-delete" data-id="${app.id}">Cancel</button>
             </div>
           </div>
-        `).join('');
-      } else {
-        DOM.appointmentListContainer.innerHTML = `<p>No appointments scheduled for today.</p>`;
-      }
-    }
+        `).join('')
+      : `<p class="no-appointments">No appointments today</p>`;
   }
 
-  // Render Messages (simple simulation)
-  function renderMessages() {
-    if (DOM.chatMessages) {
-      DOM.chatMessages.innerHTML = state.messages.map(msg => `
-        <div class="message ${msg.from === 'doctor' ? 'doctor' : 'patient'}">
-          <p>${msg.text}</p>
-          <span>${msg.time}</span>
-        </div>
-      `).join('');
-      DOM.chatMessages.scrollTop = DOM.chatMessages.scrollHeight;
-    }
-  }
-
-  // Send a message (simulate response)
-  function sendMessage() {
-    const text = DOM.messageInput.value.trim();
-    if (!text) {
-      alert("Please type a message.");
-      return;
-    }
-    const message = {
-      text: text.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
-      from: 'doctor',
-      time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-    };
-    state.messages.push(message);
-    DOM.messageInput.value = '';
-    renderMessages();
-    // Simulate a patient reply after 1.5 seconds
-    setTimeout(() => {
-      state.messages.push({
-        text: 'Patient: Thank you, doctor!',
-        from: 'patient',
-        time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-      });
-      renderMessages();
-    }, 1500);
-  }
-
-  // Render Prescription History
-  function renderPrescriptionHistory() {
-    if (DOM.prescriptionHistoryList) {
-      if (state.prescriptions.length > 0) {
-        DOM.prescriptionHistoryList.innerHTML = state.prescriptions.map(pres => `
-          <div class="prescription-item">
-            <h4>${pres.patientName} - ${pres.medication} (${pres.dosage})</h4>
-            <p>${pres.instructions}</p>
-            <p><small>${formatDate(pres.date)}</small></p>
+  function renderAppointments() {
+    if (!DOM.appointmentListContainer) return;
+    
+    DOM.appointmentListContainer.innerHTML = state.todaysAppointments.length > 0
+      ? state.todaysAppointments.map(app => `
+          <div class="appointment-item">
+            <div class="info">
+              <h4>${app.patientName}</h4>
+              <p class="specialty">${app.specialty}</p>
+              <p class="time">${formatDate(app.date)} at ${app.time}</p>
+              <p class="reason">${app.reason}</p>
+            </div>
+            <div class="actions">
+              <button class="btn-view" data-id="${app.id}">Details</button>
+              <button class="btn-delete" data-id="${app.id}">Cancel</button>
+            </div>
           </div>
-        `).join('');
-      } else {
-        DOM.prescriptionHistoryList.innerHTML = `<p>No prescriptions have been issued yet.</p>`;
-      }
-    }
+        `).join('')
+      : `<p class="no-data">No appointments found</p>`;
   }
 
-  // Render Profile
+  function renderMessages() {
+    if (!DOM.chatMessages) return;
+    
+    DOM.chatMessages.innerHTML = state.messages.length > 0
+      ? state.messages.map(msg => `
+          <div class="message ${msg.sender === currentDoctorId ? 'sent' : 'received'}">
+            <div class="content">${msg.message_content}</div>
+            <div class="meta">
+              <time>${formatTime(msg.date_sent)}</time>
+              ${msg.sender === currentDoctorId ? '' : `<span class="sender">${msg.sender_name}</span>`}
+            </div>
+          </div>
+        `).join('')
+      : `<p class="no-data">No messages yet</p>`;
+    
+    DOM.chatMessages.scrollTop = DOM.chatMessages.scrollHeight;
+  }
+
+  function renderPrescriptionHistory() {
+    if (!DOM.prescriptionHistoryList) return;
+    
+    DOM.prescriptionHistoryList.innerHTML = state.prescriptions.length > 0
+      ? state.prescriptions.map(pres => `
+          <div class="prescription-item">
+            <h4>${pres.patient_name} - ${pres.medication}</h4>
+            <p class="dosage">${pres.dosage}</p>
+            <p class="instructions">${pres.instructions}</p>
+            <time>${formatDate(pres.date_created)}</time>
+          </div>
+        `).join('')
+      : `<p class="no-data">No prescriptions found</p>`;
+  }
+
   function renderProfile() {
-    if (DOM.profileDetails) {
-      const prof = state.profile;
-      DOM.profileDetails.innerHTML = `
-        <p><strong>Name:</strong> ${prof.name}</p>
-        <p><strong>Specialty:</strong> ${prof.specialty}</p>
-        <p><strong>Email:</strong> ${prof.email}</p>
-        <p><strong>Phone:</strong> ${prof.phone}</p>
-        <p><strong>Office:</strong> ${prof.office}</p>
-      `;
-    }
+    if (!DOM.profileDetails || !state.profile) return;
+    
+    DOM.profileDetails.innerHTML = `
+      <div class="profile-header">
+        <h3>${state.profile.name}</h3>
+        <p class="specialty">${state.profile.specialty}</p>
+      </div>
+      <div class="profile-details">
+        <p><span class="label">Email:</span> ${state.profile.email}</p>
+        <p><span class="label">Phone:</span> ${state.profile.phone}</p>
+        <p><span class="label">Office:</span> ${state.profile.office}</p>
+      </div>
+    `;
   }
 
-  // Appointment Modal - for viewing details
   function viewAppointment(id) {
-    const app = state.todaysAppointments.find(a => a.id === id);
-    if (app) {
-      DOM.modalTitle.textContent = "Appointment Details";
-      DOM.modalBody.innerHTML = `
-        <p><strong>Patient:</strong> ${app.patientName}</p>
-        <p><strong>Specialty:</strong> ${app.specialty}</p>
-        <p><strong>Date:</strong> ${formatDate(app.date)}</p>
-        <p><strong>Time:</strong> ${app.time}</p>
-        <p><strong>Reason:</strong> ${app.reason}</p>
-      `;
-      // Optionally, attach the appointment id for cancellation
-      DOM.modalCancelBtn.dataset.id = app.id;
-      DOM.appointmentModal.classList.add('active');
-    } else {
-      alert("Appointment not found.");
-    }
+    const appointment = state.todaysAppointments.find(a => a.id === id);
+    if (!appointment || !DOM.appointmentModal) return;
+    
+    DOM.modalTitle.textContent = "Appointment Details";
+    DOM.modalBody.innerHTML = `
+      <div class="appointment-details">
+        <p><span class="label">Patient:</span> ${appointment.patientName}</p>
+        <p><span class="label">Date:</span> ${formatDate(appointment.date)}</p>
+        <p><span class="label">Time:</span> ${appointment.time}</p>
+        <p><span class="label">Reason:</span> ${appointment.reason}</p>
+      </div>
+    `;
+    
+    DOM.modalCancelBtn.dataset.id = appointment.id;
+    DOM.appointmentModal.classList.add('active');
   }
 
-  // Cancel an appointment
-  function cancelAppointment(id) {
-    state.todaysAppointments = state.todaysAppointments.filter(a => a.id !== id);
-    renderDashboard();
-    renderAppointments();
-  }
-
-  // Add a Prescription
-  function addPrescription() {
-    const patientName = document.getElementById('patient-name').value.trim();
-    const medication = document.getElementById('medication').value.trim();
-    const dosage = document.getElementById('dosage').value.trim();
-    const instructions = document.getElementById('instructions').value.trim();
-    if (!patientName || !medication || !dosage || !instructions) {
-      alert("Please fill in all the fields.");
-      return;
-    }
-    const newPrescription = {
-      patientName,
-      medication,
-      dosage,
-      instructions,
-      date: new Date().toISOString()
-    };
-    state.prescriptions.push(newPrescription);
-    alert("Prescription submitted successfully.");
-    // Clear the form fields
-    document.getElementById('patient-name').value = "";
-    document.getElementById('medication').value = "";
-    document.getElementById('dosage').value = "";
-    document.getElementById('instructions').value = "";
-    renderPrescriptionHistory();
-  }
-
-  // Helper: format date string
+  // Helper Functions
   function formatDate(dateString) {
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString('en-GB', options);
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+
+  function formatTime(dateString) {
+    return new Date(dateString).toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  function showAlert(message, type) {
+    const alert = document.createElement('div');
+    alert.className = `alert ${type}`;
+    alert.textContent = message;
+    document.body.appendChild(alert);
+    setTimeout(() => alert.remove(), 3000);
+  }
+
+  function resetForm(formId) {
+    const form = document.getElementById(formId);
+    if (form) form.reset();
+  }
+
+  function switchTab(tabName) {
+    // Update active tab
+    DOM.tabs.forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.tab === tabName);
+    });
+    
+    // Update active content
+    DOM.contents.forEach(content => {
+      content.classList.toggle('active', content.id === `${tabName}-content`);
+    });
+    
+    // Update page title
+    const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
+    if (activeTab && DOM.pageTitle) {
+      DOM.pageTitle.textContent = activeTab.textContent.trim();
+    }
+  }
+
+  // Event Listeners
+  function initEventListeners() {
+    // Tab switching
+    DOM.tabs.forEach(tab => {
+      tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    });
+
+    // Appointment actions
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('.btn-delete')) {
+        cancelAppointment(e.target.closest('.btn-delete').dataset.id);
+      }
+      if (e.target.closest('.btn-view')) {
+        viewAppointment(e.target.closest('.btn-view').dataset.id);
+      }
+    });
+
+    // Modal close
+    DOM.closeModalBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        DOM.appointmentModal.classList.remove('active');
+      });
+    });
+
+    // Form submissions
+    DOM.btnSubmitPrescription?.addEventListener('click', (e) => {
+      e.preventDefault();
+      addPrescription();
+    });
+
+    document.getElementById('btn-send-message')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      sendMessage();
+    });
   }
 });
-
-function loadMessages() {
-  fetch('/api/messages/')
-      .then(response => {
-          if (!response.ok) {
-              throw new Error('Erreur lors du chargement des messages');
-          }
-          return response.json();
-      })
-      .then(data => {
-          const messageContainer = document.getElementById('messages-container');
-          messageContainer.innerHTML = ''; // vider le container
-
-          data.forEach(message => {
-              const msgDiv = document.createElement('div');
-              msgDiv.classList.add('message-item');
-              msgDiv.innerHTML = `
-                  <h4>De: ${message.sender_name}</h4>
-                  <p>${message.content}</p>
-                  <hr/>
-              `;
-              messageContainer.appendChild(msgDiv);
-          });
-      })
-      .catch(error => {
-          console.error('Erreur:', error);
-      });
-}
