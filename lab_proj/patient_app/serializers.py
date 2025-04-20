@@ -18,7 +18,7 @@ class RendezVousSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = RendezVous
-        fields = ['docteur', 'patient', 'docteur_nom', 'patient_nom', 'date', 'description', 'etat']
+        fields = ['id','docteur', 'patient', 'docteur_nom', 'patient_nom', 'date', 'description', 'etat']
     
     def validate(self, data):
         docteur = data.get('docteur')

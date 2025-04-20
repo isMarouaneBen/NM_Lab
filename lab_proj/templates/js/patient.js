@@ -6,15 +6,15 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log("Logout button clicked");
     
     // Check if token exists
-    const token = localStorage.getItem('token');
-    console.log("Token found:", token);
+    const data = localStorage.getItem('data');
+    console.log("Token found:", data.token);
     
     async function logouthandling() {
       try {
         const response = await fetch("http://127.0.0.1:8000/users/logout/", {
           method: 'POST',
           headers: {
-            'Authorization': `Token ${token}`,
+            'Authorization': `Token ${data.token}`,
             'Content-Type': 'application/json'
           },
         });

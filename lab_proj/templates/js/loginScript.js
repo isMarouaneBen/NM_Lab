@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (result.data?.user?.role) {
                 localStorage.setItem('token', result.token);
+                localStorage.setItem('data', JSON.stringify(result.data));
                 const role = result.data.user.role.toLowerCase();
                 if (role === 'patient') {
                     window.location.href = 'patient.html';

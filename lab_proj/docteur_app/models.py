@@ -13,7 +13,4 @@ class Message(models.Model):
     envoie = models.ForeignKey(User , on_delete=models.CASCADE, related_name="message_envoyé")
     reception = models.ForeignKey(User,  on_delete=models.CASCADE, related_name="message_recu")
     message_content = models.TextField()
-    date_message = models.DateTimeField(auto_now_add=True)
-
-
-
+    date_message = models.DateTimeField(auto_now_add=True) # date of a message

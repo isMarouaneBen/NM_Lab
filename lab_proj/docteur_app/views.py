@@ -27,27 +27,26 @@ def update_rendez_vous_etat():
 def docteurCancelRendezvousView(request, rendez_vous_id):
     try:    
         rendez_vous = get_object_or_404(RendezVous, id=rendez_vous_id)
-        rendez_vous.etat = 'annulé'
-        rendez_vous.save()
-        subject = "Annulation d'un Rendez vous"
-        message = f"""
-        Bonjour {rendez_vous.patient.user.last_name.upper()},
+        rendez_vous.delete()
+        # subject = "Annulation d'un Rendez vous"
+        # message = f"""
+        # Bonjour {rendez_vous.patient.user.last_name.upper()},
 
-        Votre Rendez-vous avec Dr.{rendez_vous.docteur.user.last_name.upper()} à {rendez_vous.date} a été annulé .
+        # Votre Rendez-vous avec Dr.{rendez_vous.docteur.user.last_name.upper()} à {rendez_vous.date} a été annulé .
 
-        Pour plus de details ,veuillez contacter le docteur, ou vous pouvez simplement reserver une autre date.
+        # Pour plus de details ,veuillez contacter le docteur, ou vous pouvez simplement reserver une autre date.
 
-        on s'excuse et on vous souhaite une bonne journée.
-        Cordialement,
-        Équipe NM_LAB
-        """
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[rendez_vous.patient.user.email],
-            fail_silently=False,
-        )
+        # on s'excuse et on vous souhaite une bonne journée.
+        # Cordialement,
+        # Équipe NM_LAB
+        # """
+        # send_mail(
+        #     subject=subject,
+        #     message=message,
+        #     from_email=settings.DEFAULT_FROM_EMAIL,
+        #     recipient_list=[rendez_vous.patient.user.email],
+        #     fail_silently=False,
+        # )
     except Exception as e:
         return Response({
             "message":f"error : {str(e)}"
@@ -76,7 +75,6 @@ def todayRendezVousView(request):
     today = date.today()
     today_rendezvous = RendezVous.objects.filter(date__date=today , docteur__user = request.user)
     serializer = RendezVousSerializer(today_rendezvous, many=True)
-    
     if not serializer.data:
         return Response({
             "message": "pas de rendez-vous aujourd'hui"
@@ -138,11 +136,20 @@ def seeMessagesView(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def historicPrescriptionView(request, cin):
-    update_rendez_vous_etat()
-    rendez_vous = Prescription.objects.filter(date__patient__cin = cin)
-    if rendez_vous.exists() :
-        serializer = PrescriptionSerializer(rendez_vous, many = True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    return Response({
-        "message":"aucun prescriptions encore pour cet patient"
-    })
+    try :
+        update_rendez_vous_etat()
+        patient = Patient.objects.get(cin = cin)
+        rendez_vous = Prescription.objects.filter(date__patient__cin = cin)
+        serializer = PrescriptionSerializer(rendez_vous , many = True)
+        reponse = {
+            'nom_patient':f"{patient.user.get_full_name()}",
+            'prescriptions':serializer.data
+        }
+        return Response(reponse, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"detail":str(e)},status=status.HTTP_404_NOT_FOUND)
+@api_view(['GET'])
+def list_messages(request):
+    messages = Message.objects.all()
+    serializer = MessageSerializer(messages, many=True)
+    return Response(serializer.data)
