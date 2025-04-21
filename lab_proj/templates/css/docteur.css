@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
 :root {
   --primary-color: #011428;
   --secondary-color: #1c528c;
@@ -116,11 +118,126 @@ header {
   display: none;
 }
 
-.content.active {
-  display: block;
+.card-content{
+  display: flex;
+}
+.card-content .moyen-age , 
+.title-monthly,
+.title-rdcount{
+  font-family: 'Inter', sans-serif;
+  flex-grow: 1;
+}
+.title-monthly{
+  font-weight: 900;
+  color: #011428;
+}
+#monthly-patients{
+  border-left: 2px solid #011428;
+
+}
+#count-rdv{
+  border-left: 2px solid #007bff;
+}
+#moyenAge {
+  border-left: 2px solid#3d76b3;
 }
 
-/* Cards */
+.card-content .moyen-age{
+  font-weight: 900;
+  color: #3d76b3;
+
+}
+
+.title-rdcount{
+  font-weight: 900;
+  color: #007bff;
+}
+
+
+.content.active {
+  display: flex;
+  flex-direction: column;
+
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* Left side 2x wider than right */
+  grid-template-rows: 1fr 1fr; /* Two rows for the right side */
+  gap: 10px;
+  background-color: #f8f9fa;
+  margin-bottom: 16px;
+  height: 500px; /* Fixed height instead of max-height */
+}
+
+.rdv-progress {
+  grid-column: 1;
+  grid-row: 1 / span 2; /* Make it span both rows */
+}
+
+.age-partition {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  height: auto; /* Remove fixed height */
+  width: auto; /* Remove fixed width */
+}
+
+.age-partition,.blood-partition,.rdv-progress{
+  background-color: #ffffff ;
+  border : 1px solid #f8f9fa;
+}
+
+.blood-partition {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  height: auto; /* Remove fixed height */
+  min-height: unset; /* Remove min-height */
+  align-items: stretch;
+}
+
+/* Adjust headers */
+.age-partition h2,
+.blood-partition h2 {
+  margin-bottom: 5px;
+  font-size: 16px; /* Smaller header */
+}
+
+/* Adjust the canvas containers */
+#ageBarChart {
+  flex: 1;
+  width: 100% !important;
+  height: auto !important; /* Let height be determined by the container */
+}
+
+#bloodDonutChart{
+  max-height: 200px !important; /* Force maximum height */
+  width: 100% !important;
+}
+
+.statistiques {
+  display: flex;
+  gap : 15px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.upcoming-rdv {
+  margin-top: 10px;
+  background-color: #ffffff;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  height: 300px;
+  width: auto;
+  padding: 0px;
+}
+.title-section {
+  background-color: #011428;
+  color: white;
+  padding: 10px;
+}
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -129,9 +246,10 @@ header {
 }
 
 .card {
+  flex-grow: 1;
   background-color: white;
   padding: 20px;
-  border-radius: 8px;
+  border-left: 1px solid rgb(24, 24, 82);
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 

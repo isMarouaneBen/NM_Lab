@@ -65,8 +65,13 @@ def upcomingRendezvousView(request):
         date__gte=now,   
         etat='planifié' 
     )
-    serialized_data = RendezVousSerializer(appointments, many=True).data
-    return Response(serialized_data)
+    if appointments.exists() :
+        serialized_data = RendezVousSerializer(appointments, many=True).data
+        return Response(serialized_data)
+    else : 
+        return Response({
+            "message" : "pas de rendez-vous courant"
+        } , status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

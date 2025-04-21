@@ -1,4 +1,5 @@
 const token = localStorage.getItem('token');
+let drData = JSON.parse(localStorage.getItem('data')); 
 
 document.addEventListener('DOMContentLoaded', function() {
   const logoutbutton = document.querySelector(".btn-logout")
@@ -17,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
           headers: {
             'Authorization': `Token ${token}`,
             'Content-Type': 'application/json'
-          },
+          }
         });
         
         console.log("Server response status:", response.status);
@@ -176,7 +177,6 @@ document.addEventListener('DOMContentLoaded', function() {
         renderProfile();
       }
     }
-    const drData = JSON.parse(localStorage.getItem('data')); // Convert back from string to object
 
   
     // Render all sections
@@ -187,6 +187,14 @@ document.addEventListener('DOMContentLoaded', function() {
       renderPrescriptionHistory();
       renderProfile();
       WritePrescription();
+      renderDocName();
+      ageChart();
+      bloodFunction();
+      rdvProgression();
+      renderUpcomingRdv();
+      renderAvgAge();
+      renderRdvCounts();
+      renderMonthlyPatient();
     }
     function isoToDateTime(isoString) {
       const date = new Date(isoString);
@@ -448,20 +456,23 @@ async function renderAppointments() {
     }
 
 
-    // Render Profile
     function renderProfile() {
-
       if (DOM.profileDetails) {
-        console.log(drData); 
-        
-        DOM.profileDetails.innerHTML = `
-          <p><strong>Name:</strong> ${drData.user.first_name} ${drData.user.last_name} </p>
-          <p><strong>Specialty:</strong> ${drData.specialite}</p>
-          <p><strong>Email:</strong> ${drData.user.email}</p>
-        `;
+        if (drData && drData.user) {
+          console.log(drData);
+          
+          DOM.profileDetails.innerHTML = `
+            <p><strong>Nom Complet : DR.</strong> ${drData.user.first_name} ${drData.user.last_name}</p>
+            <p><strong>Spécialité : </strong> ${drData.specialite || 'Not specified'}</p>
+            <p><strong>Email :</strong> ${drData.user.email}</p>
+          `;
+        } else {
+          DOM.profileDetails.innerHTML = `
+            <p>Profile non trouvable , essayer de vous reconnecter de nouveau.</p>
+          `;
+        }
       }
     }
-  
     // Appointment Modal - for viewing details
     function viewAppointment(id) {
       const app = state.todaysAppointments.find(a => a.id === id);
@@ -489,8 +500,312 @@ async function renderAppointments() {
       renderAppointments();
     }
   
-    
+    function renderDocName() {
+      const docSection = document.getElementById("nom-doc");
+      docSection.innerHTML = `Dr. ${drData.user.first_name.toUpperCase()} ${drData.user.last_name.toUpperCase()}`;
+    }
+
+    async function ageChart() {
+      const ageChart = document.getElementById("ageBarChart");
+      const url = "http://127.0.0.1:8000/statistics/chart/age-partition/";
+      const result = await fetch(url , {
+        method: 'GET',
+        headers: {
+          'Authorization':`Token ${token}`,
+          'Content-Type':'application/json'
+        }
+      })
+      if(result.ok) {
+        try{
+        const data = await result.json();
+        const counts = {
+          '0-18 ans': 0,
+          '18-25 ans': 0,
+          '25-40 ans': 0,
+          '+40 ans': 0
+        };
+        data.forEach(patient => {
+          if (counts[patient.category_age] !== undefined) {
+            counts[patient.category_age]++;
+          }
+        });
+        const labels = Object.keys(counts);
+        const values = Object.values(counts);
+        const ctx = ageChart.getContext('2d');
+        const ageBarChart = new Chart(ctx , {
+          type : 'bar',
+          data :{
+            labels : labels,
+            datasets: [{
+              label : 'Nombre de patients',
+              data : values,
+              backgroundColor: 'rgba(54,162,235,0.5)',
+              borderColor: 'rgba(54 , 162, 235, 1)',
+              borderWidth: 3
+            }]
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  precision : 0
+                }
+              }
+            },
+            plugins: {
+              legend: {
+                position: 'top'
+              },
+              title: {
+                display: true,
+                text: "La repartition d'age des patients "
+              }
+            }
+          }
+        });
+      } catch(error) {
+        console.log(error);
+      }
+    }
+      else {
+        console.error("error loading chart");
+      }
+    }
+
+  async function bloodFunction() {
+    const bloodChart = document.getElementById("bloodDonutChart");
+    const url = "http://127.0.0.1:8000/statistics/chart/blood-groups/";
+    const response = await fetch(url ,{
+      method:'GET',
+      headers: {
+        'Authorization':`Token ${token}`,
+        'Content-Type':'application/json'
+      }
+    });
+    if(response.ok){
+      try{
+        const data = await response.json();
+      const labels = data.map(item => item.category_blood);
+      const values = data.map(item => item.data_quantity);
+      const ctx = bloodChart.getContext('2d');
+      const donutChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Répartition Groupe Sanguin',
+            data: values,
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.7)',
+              'rgba(54, 162, 235, 0.7)',
+              'rgba(255, 206, 86, 0.7)',
+              'rgba(75, 192, 192, 0.7)',
+              'rgba(153, 102, 255, 0.7)',
+              'rgba(255, 159, 64, 0.7)',
+              'rgba(201, 203, 207, 0.7)',
+              'rgba(100, 149, 237, 0.7)'
+            ],
+            borderColor: [
+              'rgba(255, 99, 132, 1)',
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 206, 86, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(153, 102, 255, 1)',
+              'rgba(255, 159, 64, 1)',
+              'rgba(201, 203, 207, 1)',
+              'rgba(100, 149, 237, 1)'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          cutout: '60%',
+          plugins: {
+            legend: {
+              position: 'right',
+              align: 'center',
+              labels:{
+                boxWidth: 8,
+                padding: 6,
+                font:{
+                  size: 9
+                }
+              },
+
+              tooltip: {
+                enabled: true
+              }
+              }
+            }
+          }
+        
+      });
+      } catch(error) {
+        console.log(error);
+      }
+    } else {
+      console.error("error loading blood groups donut chart");
+    }
+          
+  }
+
+  async function rdvProgression(){
+    const url = "http://127.0.0.1:8000/statistics/chart/rdv-progression/";
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Token ${token}`,
+        'Content-Type': 'application/js'
+      }
+    });
+    if(response.ok) {
+      try {
+        const data = await response.json();
+        const rdvChart = document.getElementById("rdvLineChart");
+        const labels = data.map(item => item.month);
+        const values = data.map(item => item.count);
+        const ctx = rdvChart.getContext('2d');
+        const chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Nombre de Rendez-vous',
+              data: values,
+              backgroundColor: 'rgba(54, 162, 235, 0.2)',
+              borderColor: 'rgba(54, 162, 235, 1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4 
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  precision: 0 
+                }
+              }
+            },
+            plugins: {
+              legend: {
+                position: 'top'
+              },
+              title: {
+                display: true,
+                text: 'Progression des Rendez-vous par Mois'
+              }
+            }
+          }
+        });
+      } catch (error) {
+        console.log(error);
+      }
+    } else {
+      console.error("erreur produite lors de la creation du rendezvousProgression");
+    }
+  }
+
+  async function renderUpcomingRdv() {
+    const listeRdv = document.querySelector(".rdv-liste");
+    const url = "http://127.0.0.1:8000/docteur/upcoming-rendezvous/";
+    const response = await fetch(url , {
+      method: 'GET',
+      headers:{
+        'Authorization':`Token ${token}`,
+        'Content-Type': 'applicaiton/json'
+      }
+    });
+    if (response.ok){
+      try{
+        const data = await response.json();
+        if(data.length > 0)
+          listeRdv.innerHTML =  data.map(app => `
+            <div class="appointment-item">
+              <div class="appointment-info">
+                <h4>${app.patient_nom} - ${app.description}</h4>
+                <p><i class="far fa-calendar-alt"></i> ${isoToDateTime(app.date)}</p>
+              </div>
+            </div>
+          `).join('');
   
+
+      }catch(error){
+        console.log(error);
+      }
+    }else{
+      const data = await response.json();
+      if(response.status == 404){
+        listeRdv.innerHTML = `<p>${data.message}</p>`;
+      }else{
+      console.error("error lors de renderUpcomingrdv function !");
+      }
+    }
+  }
+
+  async function renderAvgAge() {
+    const urlMoyenAge = "http://127.0.0.1:8000/statistics/moyen-age/";
+    const ageMoyen = document.querySelector(".moyen-age");
+    const responseAvgData = await fetch(urlMoyenAge , {
+      method:'GET',
+      headers:{
+        'Authorization':`Token ${token}`,
+        'Content-Type':'application/json'
+      }
+    });
+    if(responseAvgData.ok) {
+      const avg = await responseAvgData.json();
+      ageMoyen.innerHTML = `Âge moyen : ${avg.average_age}`;
+    }
+    else{
+      console.error("error dans la reponse");
+    }
+  }
+
+  async function renderMonthlyPatient() {
+    const urlMonthlyPatient = "http://127.0.0.1:8000/statistics/monthly-patients/";
+    const monthPatient = document.querySelector(".title-monthly");
+    const response = await fetch(urlMonthlyPatient , {
+      method:'GET',
+      headers:{
+        'Authorization':`Token ${token}`,
+        'Content-Type':'application/json'
+      }
+    });
+    if(response.ok) {
+      const data = await response.json();
+      console.log(data);
+      monthPatient.innerHTML = `Patients mensuels : ${data.monthly_patients}`;
+    }
+    else{
+      console.error("error dans la reponse")
+    }
+  }
+
+  async function renderRdvCounts() {
+    const urlCountRdv = "http://127.0.0.1:8000/statistics/today-rendezvous-count/";
+    const rdvCount = document.querySelector('.title-rdcount');
+    const response = await fetch(urlCountRdv , {
+      method:'GET',
+      headers:{
+        'Authorization':`Token ${token}`,
+        'Content-Type':'application/json'
+      }
+    });
+    if(response.ok) {
+      let data = await response.json();
+      rdvCount.innerHTML = `Rendez-Vous aujourdhui: ${data.today_rendezvous}`;
+    }
+    else{
+      console.error("error dans la reponse")
+    }
+  }
+
+
     // Helper: format date string
     function formatDate(dateString) {
       const options = { year: 'numeric', month: 'long', day: 'numeric' };
