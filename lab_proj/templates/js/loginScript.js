@@ -40,12 +40,15 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("API Response:", result);
 
             if (result.data?.user?.role) {
-                localStorage.setItem('token', result.token);
-                localStorage.setItem('data', JSON.stringify(result.data));
+                
                 const role = result.data.user.role.toLowerCase();
                 if (role === 'patient') {
+                    localStorage.setItem('patientoken', result.token);
+                    localStorage.setItem('patientData', JSON.stringify(result.data));
                     window.location.href = 'patient.html';
                 } else if (role === 'docteur') {
+                    localStorage.setItem('data', JSON.stringify(result.data));
+                    localStorage.setItem('token', result.token);
                     window.location.href = 'docteur.html';
                 } else {
                     window.location.href = 'register.html';

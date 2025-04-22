@@ -144,7 +144,7 @@ def historicPrescriptionView(request, cin):
     try :
         update_rendez_vous_etat()
         patient = Patient.objects.get(cin = cin)
-        rendez_vous = Prescription.objects.filter(date__patient__cin = cin)
+        rendez_vous = Prescription.objects.filter(date__patient__cin = cin).exclude(etat="completé").exclude(etat="annulé")
         serializer = PrescriptionSerializer(rendez_vous , many = True)
         reponse = {
             'nom_patient':f"{patient.user.get_full_name()}",

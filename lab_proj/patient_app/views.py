@@ -9,11 +9,11 @@ from .models import *
 from auth_app.models import User
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from docteur_app.models import Message
 from docteur_app.serializers import MessageSerializer
-from docteur_app.models import Prescription
+from docteur_app.models import Prescription,Message
 from docteur_app.serializers import PrescriptionSerializer
-
+from datetime import date,datetime
+from docteur_app.views import update_rendez_vous_etat
 
 
 
@@ -58,7 +58,7 @@ def ReserverRendezvousView(request):
 
 def historicRendezvousView(request,cin):
     patient = get_object_or_404(Patient , cin = cin)
-    rendez_vous = RendezVous.objects.filter(patient = patient)
+    rendez_vous = RendezVous.objects.filter(patient = patient).exclude(etat = 'annulé')
     serializer = RendezVousSerializer(rendez_vous, many = True)
     try :
         if rendez_vous.exists():
@@ -140,3 +140,44 @@ def patientPrescriptionsView(request):
             {"message": "Aucune prescription trouvée pour ce patient."},
             status=status.HTTP_404_NOT_FOUND
         )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ListDoctorsViews(request): 
+    try:
+        docteurs = Docteur.objects.all()
+        data =[]
+        for docteur in docteurs : 
+            data.append({
+                'nom_doc': docteur.user.get_full_name() ,
+                'specialite':docteur.specialite
+                })
+        return Response(data,status=status.HTTP_200_OK)
+    except Docteur.DoesNotExist :
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+        
+
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def nextAppointmentView(request, cin):
+    update_rendez_vous_etat()
+    patient = Patient.objects.filter(cin=cin).first()
+    if patient:
+        today = date.today()
+        now = datetime.now()
+        time_now = now.time()
+        rdv = RendezVous.objects.filter(
+            patient=patient,
+            date__date__gte=today,
+            date__time__gte=time_now
+        ).order_by('date')
+        
+        if rdv.exists():
+            serializer = RendezVousSerializer(rdv.first())
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "No upcoming appointments found"}, status=status.HTTP_404_NOT_FOUND)
+    else:
+        return Response({"message": "Patient not found"}, status=status.HTTP_400_BAD_REQUEST)
