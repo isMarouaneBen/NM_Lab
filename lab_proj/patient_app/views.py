@@ -1,6 +1,6 @@
 from django.shortcuts import render
 
-# Create your views here.
+from django.db.models import Q 
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view,permission_classes
@@ -87,44 +87,36 @@ def cancelRendezvousView(request, rendez_vous_id):
 @permission_classes([IsAuthenticated])
 
 def writeMessageView(request):
-    sender = request.user
-    receiver_email = request.data.get('receiver_email')
-    message_content = request.data.get('message_content')
-    objet = request.data.get('objet')
-    if not receiver_email or not message_content or not objet:
-        return Response({"message": "veuiller remplire les champs."}, status=status.HTTP_400_BAD_REQUEST)
-    try:
-        receiver = User.objects.get(email=receiver_email)
-    except User.DoesNotExist:
-        return Response({"message": "destinataire non trouvable."}, status=status.HTTP_404_NOT_FOUND)
-    message_data = {
-        'objet': objet,
-        'envoie': sender.id,
-        'reception': receiver.id,
-        'message_content': message_content
-    }
-    serializer = MessageSerializer(data = message_data)
+    serializer = MessageSerializer(data = request.data)
     if serializer.is_valid():
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors , status=status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_200_OK)
+    else :
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def getConversationView(request, contact_id):
+    try:
+        contact = User.objects.get(id=contact_id)
 
-def seeMessagesView(request):
-    messages_envoyes = Message.objects.filter(envoie = request.user)
-    messages_reçu = Message.objects.filter(reception = request.user)
-    list_messages = messages_envoyes.union(messages_reçu).order_by('-date_message')
-    if list_messages.exists():
-        serializer = MessageSerializer(list_messages, many = True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    else:
-        return Response({
-            "message": "aucun message"
-        }, status=status.HTTP_404_NOT_FOUND)
-    
+        messages_from_contact = Message.objects.filter(envoie=contact, reception=request.user)
+        messages_from_user = Message.objects.filter(envoie=request.user, reception=contact)
+        conversation = messages_from_contact.union(messages_from_user).order_by('date_message')
 
+        if conversation.exists():
+            print("Utilisateur connecté :", request.user.id)
+            print("id_patient ", request.user.patient.id)
+            serializer = MessageSerializer(conversation, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response([], status=status.HTTP_200_OK)  # Return empty array instead of 404
+
+    except User.DoesNotExist:
+        return Response({"message": "Contact introuvable"}, status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @permission_classes([IsAuthenticated])
@@ -181,3 +173,42 @@ def nextAppointmentView(request, cin):
             return Response({"message": "No upcoming appointments found"}, status=status.HTTP_404_NOT_FOUND)
     else:
         return Response({"message": "Patient not found"}, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ListContactDocView(request):
+    rendez_vous = RendezVous.objects.filter(patient = request.user.patient) 
+    try:
+        if rendez_vous.exists():
+            listContact = []
+            ids = set()
+            for rdv in rendez_vous : 
+                docteur = rdv.docteur
+                if not docteur.id in ids:
+                    listContact.append({
+                        'nom_doc':docteur.user.get_full_name(),
+                        'email_doc':docteur.user.email,
+                        'id_doc':docteur.user.id
+                    })
+                    ids.add(docteur.id)
+            return Response(listContact,status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+    except Exception as e :
+        return Response({
+            'error':str(e)
+        },status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getUserId(request, id):
+    try: 
+        patient = Patient.objects.get(id = id)
+        user = User.objects.get(email = patient.user.email)
+        return Response({
+            "user_id": user.id
+        }, status=status.HTTP_200_OK)
+    except Exception as e :
+        return Response({
+            "message_error":str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)

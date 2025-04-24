@@ -158,3 +158,28 @@ def list_messages(request):
     messages = Message.objects.all()
     serializer = MessageSerializer(messages, many=True)
     return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ListContactPatientView(request):
+    rendez_vous = RendezVous.objects.filter(docteur = request.user.docteur)
+    try:
+        if rendez_vous.exists():
+            listContact = []
+            ids = set()
+            for rdv in rendez_vous : 
+                patient = rdv.patient
+                if not patient.id in ids :
+                    listContact.append({
+                            'nom_patient':patient.user.get_full_name(),
+                            'email_patient':patient.user.email,
+                            'id':patient.user.id
+                    })
+                    ids.add(patient.id)
+            return Response(listContact,status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+    except Exception as e :
+        return Response({
+            'error':str(e)
+        },status=status.HTTP_400_BAD_REQUEST)
