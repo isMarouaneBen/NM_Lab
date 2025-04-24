@@ -62,9 +62,10 @@ def upcomingRendezvousView(request):
     update_rendez_vous_etat()
     now = timezone.now()
     appointments = RendezVous.objects.filter(
-        date__gte=now,   
-        etat='planifié' 
-    )
+        date__time__gte=now.time(),
+        date__date__gte = now.date(),   
+        etat='planifié'
+    ).exclude(etat = "completé").exclude(etat = "annulé").order_by("date")
     if appointments.exists() :
         serialized_data = RendezVousSerializer(appointments, many=True).data
         return Response(serialized_data)
@@ -99,44 +100,40 @@ def writePrescriptionView(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-
 def writeMessageView(request):
-    sender = request.user
-    receiver_email = request.data.get('receiver_email')
-    message_content = request.data.get('message_content')
-    objet = request.data.get('objet')
-    if not receiver_email or not message_content or not objet:
-        return Response({"message": "veuiller remplire les champs."}, status=status.HTTP_400_BAD_REQUEST)
-    try:
-        receiver = User.objects.get(email=receiver_email)
-    except User.DoesNotExist:
-        return Response({"message": "destinataire non trouvable."}, status=status.HTTP_404_NOT_FOUND)
-    message_data = {
-        'objet': objet,
-        'envoie': sender.id,
-        'reception': receiver.id,
-        'message_content': message_content
-    }
-    serializer = MessageSerializer(message_data)
+    serializer = MessageSerializer(data = request.data)
     if serializer.is_valid():
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors , status=status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_200_OK)
+    else :
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['POST'])
+
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def seeMessagesView(request):
-    messages_envoyes = Message.objects.filter(envoie = request.user)
-    messages_reçu = Message.objects.filter(reception = request.user)
-    list_messages = messages_envoyes.union(messages_reçu).order_by('-date_message')
-    if list_messages.exists():
-        serializer = MessageSerializer(list_messages, many = True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    else:
-        return Response({
-            "message": "aucun message"
-        }, status=status.HTTP_404_NOT_FOUND)
+def seeMessagesView(request, contact_id):
+    try:
+        contact = User.objects.get(id=contact_id)
+
+        messages_from_contact = Message.objects.filter(envoie=contact, reception=request.user)
+        messages_from_user = Message.objects.filter(envoie=request.user, reception=contact)
+        conversation = messages_from_contact.union(messages_from_user).order_by('date_message')
+
+        if conversation.exists():
+            print("Utilisateur connecté :", request.user.id)
+            serializer = MessageSerializer(conversation, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response([], status=status.HTTP_200_OK)  # Return empty array instead of 404
+
+    except User.DoesNotExist:
+        return Response({"message": "Contact introuvable"}, status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -183,3 +180,17 @@ def ListContactPatientView(request):
         return Response({
             'error':str(e)
         },status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getUserId(request, id):
+    try: 
+        docteur = Docteur.objects.get(id = id)
+        user = User.objects.get(email = docteur.user.email)
+        return Response({
+            "user_id": user.id
+        }, status=status.HTTP_200_OK)
+    except Exception as e :
+        return Response({
+            "message_error":str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)

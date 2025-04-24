@@ -668,13 +668,14 @@ function showNotificationModal(title, message, type, callback) {
 
 function renderPatientName(){
 
-  //cette fonction pour retourner la liste des docteurs pour contacter
 
   const name = document.getElementById("patient-name");
   name.innerHTML = `${patientData.user.first_name} ${patientData.user.last_name}`;
 }
 
 async function renderDrList() {
+    //cette fonction pour retourner la liste des docteurs pour contacter
+
   const patientList = document.querySelector(".patients-list");
   const sendBtn = document.getElementById("btn-send-message");
   
