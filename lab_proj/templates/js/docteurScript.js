@@ -1,5 +1,17 @@
-const token = localStorage.getItem('token');
-let drData = JSON.parse(localStorage.getItem('data')); 
+try {
+  const tokenTest = sessionStorage.getItem('token');
+
+  if (tokenTest === null) {
+    throw new Error("Token not found");
+  }
+
+} catch (error) {
+  console.error("Erreur lors de la récupération du token :", error);
+  window.location.href = "login.html";
+}
+
+const token = sessionStorage.getItem('token');
+let drData = JSON.parse(sessionStorage.getItem('data')); 
 let patientID = null;
 let currentUserId = null;
 document.addEventListener('DOMContentLoaded', function() {
@@ -28,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (response.ok) {
           console.log("Logout successful, clearing token and redirecting...");
-          localStorage.removeItem('authToken');
+          sessionStorage.removeItem('authToken');
           window.location.href = 'login.html';
         } else {
           console.error('Error:', data.detail || 'Logout failed');
@@ -109,6 +121,14 @@ document.addEventListener('DOMContentLoaded', function() {
     renderAll();
   
     function initEventListeners() {
+      document.addEventListener('DOMContentLoaded', function() {
+      
+        // Add this to restore the last active tab
+        const lastActiveTab = localStorage.getItem('currentTab');
+        if (lastActiveTab) {
+          switchTab(lastActiveTab);
+        }
+      });
       // Tab switching
       DOM.tabs.forEach(tab => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
@@ -157,6 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
           WritePrescription();
         });
       }
+
     }
   
     // Tab switching
@@ -173,24 +194,43 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       if (tabName === 'prescription-history') {
         renderPrescriptionHistory();
+        sessionStorage.setItem('currentTab', tabName);
+
+      }
+      if(tabName === 'write-prescription'){
+        WritePrescription();
+        sessionStorage.setItem('currentTab', tabName);
+
       }
       if (tabName === 'profile') {
         renderProfile();
+        sessionStorage.setItem('currentTab', tabName);
       }
       if(tabName === 'messages') {
         renderPatientList();
+        sessionStorage.setItem('currentTab', tabName);
+
       }
+      if(tabName === 'appointments') {
+        sessionStorage.setItem('currentTab', tabName);
+      }
+      if(tabName === 'dashboard' ) {
+        sessionStorage.setItem('currentTab', tabName);
+      }
+      
     }
+
+
 
   
     // Render all sections
     function renderAll() {
-      renderDashboard();
+      switchTab(sessionStorage.getItem("currentTab"));
+      // renderDashboard();
       renderAppointments();
       // renderMessages();
       renderPrescriptionHistory();
       renderProfile();
-      WritePrescription();
       renderDocName();
       ageChart();
       bloodFunction();
@@ -214,19 +254,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   
     // Render Dashboard (today's appointments summary)
-    function renderDashboard() {
-      if (DOM.todayAppointmentsContainer) {
-        if (state.todaysAppointments.length > 0) {
-          DOM.todayAppointmentsContainer.innerHTML = state.todaysAppointments.map(app => `
-            <p><strong>${app.patientName}</strong> - ${app.specialty}</p>
-            <p><i class="far fa-calendar-alt"></i> ${formatDate(app.date)} at ${app.time}</p>
-            <button class="btn-delete" data-id="${app.id}">Cancel</button>
-          `).join('');
-        } else {
-          DOM.todayAppointmentsContainer.innerHTML = `<p>No appointments for today.</p>`;
-        }
-      }
-    }
+    // function renderDashboard() {
+    //   if (DOM.todayAppointmentsContainer) {
+    //     if (state.todaysAppointments.length > 0) {
+    //       DOM.todayAppointmentsContainer.innerHTML = state.todaysAppointments.map(app => `
+    //         <p><strong>${app.patientName}</strong> - ${app.specialty}</p>
+    //         <p><i class="far fa-calendar-alt"></i> ${formatDate(app.date)} at ${app.time}</p>
+    //         <button class="btn-delete" data-id="${app.id}">Cancel</button>
+    //       `).join('');
+    //     } else {
+    //       DOM.todayAppointmentsContainer.innerHTML = `<p>No appointments for today.</p>`;
+    //     }
+    //   }
+    // }
+  
+
   
     // Render Appointments List
 async function renderAppointments() {
@@ -393,33 +435,8 @@ async function renderAppointments() {
     //   }
     // }
   
-    // Send a message (simulate response)
-    function sendMessage() {
-      const text = DOM.messageInput.value.trim();
-      if (!text) {
-        alert("Please type a message.");
-        return;
-      }
-      const message = {
-        text: text.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
-        from: 'doctor',
-        time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-      };
-      state.messages.push(message);
-      DOM.messageInput.value = '';
-      renderMessages();
-      // Simulate a patient reply after 1.5 seconds
-      setTimeout(() => {
-        state.messages.push({
-          text: 'Patient: Thank you, doctor!',
-          from: 'patient',
-          time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-        });
-        renderMessages();
-      }, 1500);
-    }
+
   
-    // Render Prescription History
     function renderPrescriptionHistory() {
       const researchBtn = document.getElementById('search-history-btn');
       const cinValue = document.getElementById('patient-cin');
@@ -477,25 +494,25 @@ async function renderAppointments() {
         }
       }
     }
-    // Appointment Modal - for viewing details
-    function viewAppointment(id) {
-      const app = state.todaysAppointments.find(a => a.id === id);
-      if (app) {
-        DOM.modalTitle.textContent = "Appointment Details";
-        DOM.modalBody.innerHTML = `
-          <p><strong>Patient:</strong> ${app.patientName}</p>
-          <p><strong>Specialty:</strong> ${app.specialty}</p>
-          <p><strong>Date:</strong> ${formatDate(app.date)}</p>
-          <p><strong>Time:</strong> ${app.time}</p>
-          <p><strong>Reason:</strong> ${app.reason}</p>
-        `;
-        // Optionally, attach the appointment id for cancellation
-        DOM.modalCancelBtn.dataset.id = app.id;
-        DOM.appointmentModal.classList.add('active');
-      } else {
-        alert("Appointment not found.");
-      }
-    }
+    // // Appointment Modal - for viewing details
+    // function viewAppointment(id) {
+    //   const app = state.todaysAppointments.find(a => a.id === id);
+    //   if (app) {
+    //     DOM.modalTitle.textContent = "Appointment Details";
+    //     DOM.modalBody.innerHTML = `
+    //       <p><strong>Patient:</strong> ${app.patientName}</p>
+    //       <p><strong>Specialty:</strong> ${app.specialty}</p>
+    //       <p><strong>Date:</strong> ${formatDate(app.date)}</p>
+    //       <p><strong>Time:</strong> ${app.time}</p>
+    //       <p><strong>Reason:</strong> ${app.reason}</p>
+    //     `;
+    //     // Optionally, attach the appointment id for cancellation
+    //     DOM.modalCancelBtn.dataset.id = app.id;
+    //     DOM.appointmentModal.classList.add('active');
+    //   } else {
+    //     alert("Appointment not found.");
+    //   }
+    // }
   
     // Cancel an appointment
    async function cancelAppointment(id) {
@@ -848,7 +865,7 @@ async function renderPatientList() {
       method: 'GET',
       headers: {
         'Authorization': `Token ${token}`,
-        'Content-Type': 'application/json' // Fixed content type
+        'Content-Type': 'application/json' 
       }
     });
 
@@ -864,10 +881,13 @@ async function renderPatientList() {
           </div>
         `).join('');
 
+        sendBtn.addEventListener('click', (event)=>{
+          event.preventDefault();
+          sendMessage(patientID);
+          getConversations(card.id);
+        })
         document.querySelectorAll('.patient-card').forEach(card => {
-          sendBtn.addEventListener('click', ()=>{
-            sendMessage(patientID);
-          })
+
           card.addEventListener('click', () => {
             patientID = card.id;
             getConversations(card.id);
@@ -1028,7 +1048,8 @@ function formatTime(dateString) {
   });
 }
 
-async function sendMessage(docID) {
+async function sendMessage(patientID) {
+  event.preventDefault();
   const url = "http://127.0.0.1:8000/docteur/write-message/";
   const messageInput = document.getElementById("message-text");
   
@@ -1092,25 +1113,21 @@ async function sendMessage(docID) {
       
       chat.appendChild(messageDiv);
       
-      // Scroll to bottom
       chat.scrollTop = chat.scrollHeight;
       
-      // Clear input field
       messageInput.value = '';
       
-      // Optional: reload conversation from server to get proper message ID
       
       getConversations(patientID);
+
       
     } else {
       console.error('Failed to send message:', await response.text());
-      // Show error to user
       const errorToast = document.createElement('div');
       errorToast.className = 'error-toast';
       errorToast.textContent = "Échec de l'envoi du message";
       document.body.appendChild(errorToast);
       
-      // Remove toast after 3 seconds
       setTimeout(() => {
         errorToast.remove();
       }, 3000);

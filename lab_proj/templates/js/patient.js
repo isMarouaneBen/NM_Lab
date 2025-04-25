@@ -1,7 +1,19 @@
+try {
+  const tokenTest = sessionStorage.getItem('patientoken');
+
+  if (tokenTest === null) {
+    throw new Error("Token not found");
+  }
+
+} catch (error) {
+  console.error("Erreur lors de la récupération du token :", error);
+  window.location.href = "login.html";
+}
+
+const token = sessionStorage.getItem('patientoken');
 let docID = null;
 let currentUserId = null;
-const token = localStorage.getItem('patientoken');
-let patientData = JSON.parse(localStorage.getItem('patientData')); 
+let patientData = JSON.parse(sessionStorage.getItem('patientData')); 
 function isoToDateTime(isoString) {
   const date = new Date(isoString);
 
@@ -38,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (response.ok) {
           console.log("Logout successful, clearing token and redirecting...");
-          localStorage.removeItem('authToken');
+          sessionStorage.removeItem('authToken');
           window.location.href = 'login.html';
         } else {
           console.error('Error:', data.detail || 'Logout failed');
