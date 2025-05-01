@@ -163,7 +163,8 @@ def nextAppointmentView(request, cin):
         rdv = RendezVous.objects.filter(
             patient=patient,
             date__date__gte=today,
-            date__time__gte=time_now
+            date__time__gte=time_now,
+            etat = 'planifié'
         ).order_by('date')
         
         if rdv.exists():

@@ -15,34 +15,30 @@ class MessageSerializer(serializers.ModelSerializer):
         return message
 
 class PrescriptionSerializer(serializers.ModelSerializer):
-   '''
-    -serialiseur des prescriptions medicaux ecrites par le medcin associé.
-    -pour les demandes en methodes POST : 
-    {
-        'patient_cin':
-        'date_rendezvous':
-        'diagnostique':
-        'traitment':
-        'notes':
-    }
-   '''
-   patient_cin = serializers.CharField(write_only=True) 
-   date_rendezvous = serializers.DateTimeField(source = 'date.date') 
-   
-   class Meta:
-       model = Prescription
-       fields = ['patient_cin', 'date_rendezvous', 'diagnostique', 'traitment', 'notes']    
-   
-   def create(self, validated_data):
-       patient_cin = validated_data.pop('patient_cin')
-       date_rdv = validated_data.pop('date_rendezvous')     
-       
-       patient = Patient.objects.get(cin=patient_cin)
-       rdv = RendezVous.objects.get(patient=patient, date=date_rdv)
-       
-       prescription = Prescription.objects.create(
-           date=rdv,
-           **validated_data
-       )
-       return prescription
+    patient_cin = serializers.CharField(write_only=True)
+    date_rendezvous = serializers.DateTimeField(write_only=True)
+    
+    class Meta:
+        model = Prescription
+        fields = ['id', 'patient_cin', 'date_rendezvous', 'diagnostique', 'traitment', 'notes']
+    
+    def create(self, validated_data):
+        patient_cin = validated_data.pop('patient_cin')
+        date_rdv = validated_data.pop('date_rendezvous')
+        
+        try:
+            patient = Patient.objects.get(cin=patient_cin)
+        except Patient.DoesNotExist:
+            raise serializers.ValidationError({"patient_cin": "Patient with this CIN does not exist."})
+        
+        try:
+            rdv = RendezVous.objects.filter(patient=patient, date=date_rdv).first()
+        except RendezVous.DoesNotExist:
+            raise serializers.ValidationError({"date_rendezvous": "Appointment not found for this patient at the specified time."})
+        
+        prescription = Prescription.objects.create(
+            date=rdv,
+            **validated_data
+        )
+        return prescription
 

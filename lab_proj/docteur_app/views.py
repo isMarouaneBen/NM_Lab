@@ -141,7 +141,7 @@ def historicPrescriptionView(request, cin):
     try :
         update_rendez_vous_etat()
         patient = Patient.objects.get(cin = cin)
-        rendez_vous = Prescription.objects.filter(date__patient__cin = cin).exclude(etat="completé").exclude(etat="annulé")
+        rendez_vous = Prescription.objects.filter(date__patient__cin = cin)
         serializer = PrescriptionSerializer(rendez_vous , many = True)
         reponse = {
             'nom_patient':f"{patient.user.get_full_name()}",
@@ -193,4 +193,21 @@ def getUserId(request, id):
     except Exception as e :
         return Response({
             "message_error":str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def nextRdvListView(request):
+    try:
+        update_rendez_vous_etat()
+        rdv = RendezVous.objects.filter(docteur = request.user.docteur).exclude(etat = 'completé').exclude(etat = 'annulé').order_by('date')
+        if rdv.exists():
+            serializer = RendezVousSerializer(rdv,many = True)
+            return Response(serializer.data , status= status.HTTP_200_OK)
+        else :
+            return Response(status=status.HTTP_404_NOT_FOUND)
+    except Exception as e :
+        return Response({
+            'error':str(e)
         }, status=status.HTTP_400_BAD_REQUEST)

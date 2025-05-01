@@ -1,3 +1,4 @@
+//author:Marouane Ben Haddou
 try {
   const tokenTest = sessionStorage.getItem('patientoken');
 
@@ -6,19 +7,18 @@ try {
   }
 
 } catch (error) {
-  console.error("Erreur lors de la récupération du token :", error);
   window.location.href = "login.html";
 }
 
 const token = sessionStorage.getItem('patientoken');
 let docID = null;
 let currentUserId = null;
-let patientData = JSON.parse(sessionStorage.getItem('patientData')); 
+let patientData = JSON.parse(sessionStorage.getItem('patientData'));
 function isoToDateTime(isoString) {
   const date = new Date(isoString);
 
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+  const month = String(date.getMonth() + 1).padStart(2, '0'); 
   const day = String(date.getDate()).padStart(2, '0');
 
   const hours = String(date.getHours()).padStart(2, '0');
@@ -63,68 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     logouthandling();
   });
-
-  const state = {
-    upcomingAppointments: [
-      {
-        id: 1,
-        doctor: 'Dr. Martin',
-        specialty: 'Cardiologist',
-        date: '2023-06-15',
-        time: '14:30',
-        reason: 'Annual checkup'
-      }
-    ],
-    pastAppointments: [
-      {
-        id: 101,
-        doctor: 'Dr. Lefevre',
-        specialty: 'Dermatologist',
-        date: '2023-05-10',
-        time: '10:00',
-        reason: 'Skin rash consultation'
-      },
-      {
-        id: 102,
-        doctor: 'Dr. Petit',
-        specialty: 'General',
-        date: '2023-04-20',
-        time: '09:30',
-        reason: 'Routine checkup'
-      }
-    ],
-    prescriptions: [
-      {
-        medication: 'Atorvastatine',
-        dosage: '20mg',
-        instructions: 'Take one tablet daily after dinner',
-        doctor: 'Dr. Martin'
-      },
-      {
-        medication: 'Ibuprofen',
-        dosage: '400mg',
-        instructions: 'Take one tablet every 8 hours for pain relief',
-        doctor: 'Dr. Lefevre'
-      }
-    ],
-    messages: [],
-    profile: {
-      name: 'Marouane Ben Haddou',
-      age: 30,
-      email: 'marouane@example.com',
-      phone: '0123456789',
-      address: '123 Rue de Exemple, Ville, Pays'
-    },
-    doctorsBySpecialty: {
-      cardiology: ['Dr. Martin', 'Dr. Bernard'],
-      dermatology: ['Dr. Lefevre', 'Dr. Moreau'],
-      general: ['Dr. Petit', 'Dr. Durand']
-    },
-    availableTimes: ['09:00', '09:30', '10:00', '14:00', '14:30']
-  };
-
-  // Références DOM
-  const DOM = {
+const DOM = {
     cancelModal: document.getElementById('cancel-modal'),
     chatMessages: document.getElementById('chat-messages'),
     messageInput: document.getElementById('message-text'),
@@ -143,23 +82,19 @@ document.addEventListener('DOMContentLoaded', function() {
     closeModal: document.querySelector('.close-modal')
   };
 
-  // Initialisation
   initEventListeners();
   renderAll();
 
-  // Ajout des écouteurs
   function initEventListeners() {
-    // Gestion des onglets
     DOM.tabs.forEach(tab => {
       tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
 
-    // Bouton "New Appointment"
     if (DOM.newAppointmentBtn) {
       DOM.newAppointmentBtn.addEventListener('click', () => switchTab('appointments'));
     }
-    
-    // Bouton "Contact Doctor"
+    const seePrescriptions = document.getElementById('btn-check-prescriptions');
+    seePrescriptions.addEventListener('click', () => switchTab('prescriptions'));
     if (DOM.contactDoctorBtn) {
       DOM.contactDoctorBtn.addEventListener('click', () => {
         switchTab('messages');
@@ -168,16 +103,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
     }
-
-    // Bouton "Voir détails" pour la prescription
     if (DOM.viewPrescriptionBtn) {
       DOM.viewPrescriptionBtn.addEventListener('click', () => switchTab('prescriptions'));
     }
-    
-    // Formulaire d'appointment
-    // if (DOM.specialtySelect) {
-    //   DOM.specialtySelect.addEventListener('change', updateDoctors);
-    // }
 
     if (DOM.appointmentForm) {
       DOM.appointmentForm.addEventListener('submit', function(e) {
@@ -186,7 +114,6 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
     
-    // Délégation d'événements pour les boutons dans les rendez-vous
     document.addEventListener('click', function(e) {
       if (e.target.closest('#cancel-main-appointment')) {
         DOM.cancelModal.classList.add('active');
@@ -198,28 +125,15 @@ document.addEventListener('DOMContentLoaded', function() {
         cancelAppointment(state.upcomingAppointments[0]?.id);
         DOM.cancelModal.classList.remove('active');
       }
-      // Écouteur pour le bouton "Delete" dans les rendez-vous
-      // if (e.target.closest('.btn-delete')) {
-      //   const id = e.target.closest('.btn-delete').dataset.id;
-      //   if (confirm("Are you sure you want to delete this appointment?")) {
-      //     cancelAppointment(parseInt(id));
-      //   }
-      // }
-      // Écouteur pour le bouton "View" dans les rendez-vous
-      // if (e.target.closest('.btn-view')) {
-      //   const id = e.target.closest('.btn-view').dataset.id;
-      //   viewAppointment(parseInt(id));
-      // }
+
     });
     
-    // Fermeture de la modal en cliquant en dehors
     window.addEventListener('click', function(e) {
       if (e.target === DOM.cancelModal) {
         DOM.cancelModal.classList.remove('active');
       }
     });
     
-    // Fermeture de la modal via l'icône
     if (DOM.closeModal) {
       DOM.closeModal.addEventListener('click', () => {
         DOM.cancelModal.classList.remove('active');
@@ -227,7 +141,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Changement d'onglet
   function switchTab(tabName) {
     DOM.tabs.forEach(tab => {
       tab.classList.toggle('active', tab.dataset.tab === tabName);
@@ -256,11 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   }
 
-  // Rendu global
   function renderAll() {
-    // renderDashboard();
-    // renderAppointments();
-    // renderMessages();
     renderPrescriptions();
     renderProfile();
     prendreRdv();
@@ -268,47 +177,6 @@ document.addEventListener('DOMContentLoaded', function() {
     renderNextRdv();
     renderPatientName();
   }
-
-  // function renderDashboard() {
-  //   const container = document.querySelector('.next-appointment');
-  //   const nextAppointment = state.upcomingAppointments[0];
-  //   container.innerHTML = nextAppointment ? `
-  //     <p><strong>${nextAppointment.doctor}</strong> - ${nextAppointment.specialty}</p>
-  //     <p><i class="far fa-calendar-alt"></i> ${formatDate(nextAppointment.date)} at ${nextAppointment.time}</p>
-  //     <button class="btn-cancel" id="cancel-main-appointment">Cancel</button>
-  //   ` : '<p>No upcoming appointment</p>';
-  // }
-
-  // Appointments
-  // function renderAppointments() {
-  //   const container = document.querySelector('.upcoming-appointments');
-  //   container.innerHTML = state.upcomingAppointments.map(appointment => `
-  //     <div class="appointment-item">
-  //       <div class="appointment-info">
-  //         <h4>${appointment.doctor} - ${appointment.specialty}</h4>
-  //         <p><i class="far fa-calendar-alt"></i> ${formatDate(appointment.date)} at ${appointment.time}</p>
-  //         <p><i class="far fa-comment"></i> ${appointment.reason}</p>
-  //       </div>
-  //       <div class="appointment-actions">
-  //         <button class="btn-view" data-id="${appointment.id}">View</button>
-  //         <button class="btn-delete" data-id="${appointment.id}">Delete</button>
-  //       </div>
-  //     </div>
-  //   `).join('');
-  // }
-
-  // Messages
-  // function renderMessages() {
-  //   if (DOM.chatMessages) {
-  //     DOM.chatMessages.innerHTML = state.messages.map(msg => `
-  //       <div class="message ${msg.isPatient ? 'patient' : 'doctor'}">
-  //         <p>${msg.text}</p>
-  //         <span>${msg.time}</span>
-  //       </div>
-  //     `).join('');
-  //     DOM.chatMessages.scrollTop = DOM.chatMessages.scrollHeight;
-  //   }
-  // }
 
   async function renderPrescriptions() {
     const url = "http://127.0.0.1:8000/patient/prescriptions/voirprescriptions/";
@@ -340,7 +208,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Historique
   async function renderHistory() {
     const container = document.querySelector('.history-list');
     const url = `http://127.0.0.1:8000/patient/rendezvous/historique/${patientData.cin}/`;
@@ -372,7 +239,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
   }
 
-  // Profil
   function renderProfile() {
     const container = document.querySelector('.profile-details');
     if (container) {
@@ -387,51 +253,6 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
   }
-
-  // Envoi de message
-  // function sendMessage() {
-  //   JSON(data.stringify())
-  //   const text = DOM.messageInput.value.trim();
-  //   if (!text) {
-  //     alert("Please enter a message.");
-  //     return;
-  //   }
-  //   const escapedText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  //   state.messages.push({
-  //     text: escapedText,
-  //     isPatient: true,
-  //     time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-  //   });
-  //   DOM.messageInput.value = '';
-  //   renderMessages();
-  //   setTimeout(() => {
-  //     state.messages.push({
-  //       text: 'Thank you for your message. We will respond shortly.',
-  //       isPatient: false,
-  //       time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-  //     });
-  //     renderMessages();
-  //   }, 1500);
-  // }
-
-  // Suppression d'un rendez-vous
-  // function cancelAppointment(id) {
-  //   state.upcomingAppointments = state.upcomingAppointments.filter(a => a.id !== id);
-  //   renderAppointments();
-  //   renderDashboard();
-  //   renderHistory();
-  // }
-
-  // Affichage des détails d'un rendez-vous
-  // function viewAppointment(id) {
-  //   const appointment = state.upcomingAppointments.find(a => a.id === id);
-  //   if (appointment) {
-  //     alert(`Appointment Details:\nDoctor: ${appointment.doctor}\nSpecialty: ${appointment.specialty}\nDate: ${formatDate(appointment.date)} at ${appointment.time}\nReason: ${appointment.reason}`);
-  //   } else {
-  //     alert("Appointment not found.");
-  //   }
-  // }
-
   async function renderAllDoctors(){
     const url = "http://127.0.0.1:8000/patient/list-doctors/";
     const options = document.getElementById("doctor");
@@ -686,12 +507,10 @@ function renderPatientName(){
 }
 
 async function renderDrList() {
-    //cette fonction pour retourner la liste des docteurs pour contacter
 
   const patientList = document.querySelector(".patients-list");
   const sendBtn = document.getElementById("btn-send-message");
   
-  // Check if element exists first
   if (!patientList) {
     console.error("Patient list container not found");
     return;
@@ -704,7 +523,7 @@ async function renderDrList() {
       method: 'GET',
       headers: {
         'Authorization': `Token ${token}`,
-        'Content-Type': 'application/json' // Fixed content type
+        'Content-Type': 'application/json'
       }
     });
 
@@ -783,7 +602,6 @@ async function getConversations(idContact) {
       chat.innerHTML = ''; 
       
       if (messages.length === 0) {
-        // Aucun message
         chat.innerHTML = `
           <div class="empty-chat">
             <i class="fas fa-comment-dots"></i>
@@ -792,7 +610,6 @@ async function getConversations(idContact) {
         return;
       }
       
-      // Get current user info once before the loop
       const userResponse = await fetch(`http://127.0.0.1:8000/patient/users/${patientData.id}/`, {
         method: 'GET',
         headers: {
@@ -818,7 +635,6 @@ async function getConversations(idContact) {
         chat.appendChild(dateSeparator);
         
         dailyMessages.forEach(msg => {
-          // Check if this message was sent by current user
           const isMe = msg.envoie === currentUserId;
           
           const messageDiv = document.createElement('div');
@@ -852,7 +668,6 @@ async function getConversations(idContact) {
   }
 }
 
-// Helper: Grouper les messages par jour
 function groupMessagesByDay(messages) {
   return messages.reduce((groups, msg) => {
     const date = new Date(msg.date_message).toDateString();
@@ -862,7 +677,6 @@ function groupMessagesByDay(messages) {
   }, {});
 }
 
-// Helper: Formater la date pour les séparateurs
 function formatChatDate(dateString) {
   const today = new Date().toDateString();
   const date = new Date(dateString);
@@ -886,7 +700,6 @@ async function sendMessage(docID) {
   const url = "http://127.0.0.1:8000/patient/messages/envoyer-message/";
   const messageInput = document.getElementById("message-text");
   
-  // Check if message is empty
   if (!messageInput.value.trim()) {
     return; 
   }
@@ -925,7 +738,6 @@ async function sendMessage(docID) {
         chat.appendChild(todaySeparator);
       }
       
-      // Create message element
       const messageDiv = document.createElement('div');
       messageDiv.className = 'message sent';
       
@@ -945,24 +757,19 @@ async function sendMessage(docID) {
       
       chat.appendChild(messageDiv);
       
-      // Scroll to bottom
       chat.scrollTop = chat.scrollHeight;
       
-      // Clear input field
       messageInput.value = '';
       
-      // Optional: reload conversation from server to get proper message ID
       getConversations(docID);
       
     } else {
       console.error('Failed to send message:', await response.text());
-      // Show error to user
       const errorToast = document.createElement('div');
       errorToast.className = 'error-toast';
       errorToast.textContent = "Échec de l'envoi du message";
       document.body.appendChild(errorToast);
       
-      // Remove toast after 3 seconds
       setTimeout(() => {
         errorToast.remove();
       }, 3000);

@@ -1,27 +1,27 @@
+//Author : Marouane Ben Haddou
 try {
-  const tokenTest = sessionStorage.getItem('token');
-
+    const tokenTest = sessionStorage.getItem('token');
   if (tokenTest === null) {
     throw new Error("Token not found");
   }
 
-} catch (error) {
-  console.error("Erreur lors de la récupération du token :", error);
-  window.location.href = "login.html";
-}
 
+} catch (error) {
+    window.location.href = "login.html";
+}
+const tab = sessionStorage.getItem('currentTab');
+if(tab === null || tab === undefined) {
+  sessionStorage.setItem('currentTab', 'dashboard');
+}
 const token = sessionStorage.getItem('token');
-let drData = JSON.parse(sessionStorage.getItem('data')); 
+let drData = JSON.parse(sessionStorage.getItem('data'));
 let patientID = null;
 let currentUserId = null;
 document.addEventListener('DOMContentLoaded', function() {
   const logoutbutton = document.querySelector(".btn-logout")
   
-  // Add the event listener with debug logging
   logoutbutton.addEventListener('click', function() {
     console.log("Logout button clicked");
-    
-    // Check if token exists
     console.log("Token found:", token);
     
     async function logouthandling() {
@@ -36,11 +36,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log("Server response status:", response.status);
         const data = await response.json();
-        console.log("Server response data:", data);
         
         if (response.ok) {
           console.log("Logout successful, clearing token and redirecting...");
           sessionStorage.removeItem('authToken');
+          sessionStorage.removeItem('data');
+          sessionStorage.removeItem('currentTab');
           window.location.href = 'login.html';
         } else {
           console.error('Error:', data.detail || 'Logout failed');
@@ -52,63 +53,57 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     logouthandling();
-  });    const state = {
-      todaysAppointments: [
-        {
-          id: 1,
-          patientName: 'Imane Bouzid',
-          specialty: 'Cardiology',
-          date: '2023-06-15',
-          time: '09:30',
-          reason: 'Routine check-up'
-        },
-        {
-          id: 2,
-          patientName: 'Leila Bensalem',
-          specialty: 'Cardiology',
-          date: '2023-06-15',
-          time: '10:15',
-          reason: 'Follow-up consultation'
-        }
-      ],
-      prescriptions: [
-        {
-          patientName: 'Jane Doe',
-          medication: 'Atorvastatin',
-          dosage: '20mg',
-          instructions: 'Take one tablet daily after dinner',
-          date: '2023-06-10'
-        }
-      ],
-      messages: [],
-      profile: {
-        name: 'Dr. Nassima Maarouf',
-        specialty: 'Cardiology',
-        email: 'dr.NassimaMaa@gmail.com',
-        phone: '0687654321',
-        office: 'Room 101, NMLab'
-      }
-    };
+  });    
+});
+  // const state = {
+  //     todaysAppointments: [
+  //       {
+  //         id: 1,
+  //         patientName: 'Imane Bouzid',
+  //         specialty: 'Cardiology',
+  //         date: '2023-06-15',
+  //         time: '09:30',
+  //         reason: 'Routine check-up'
+  //       },
+  //       {
+  //         id: 2,
+  //         patientName: 'Leila Bensalem',
+  //         specialty: 'Cardiology',
+  //         date: '2023-06-15',
+  //         time: '10:15',
+  //         reason: 'Follow-up consultation'
+  //       }
+  //     ],
+  //     prescriptions: [
+  //       {
+  //         patientName: 'Jane Doe',
+  //         medication: 'Atorvastatin',
+  //         dosage: '20mg',
+  //         instructions: 'Take one tablet daily after dinner',
+  //         date: '2023-06-10'
+  //       }
+  //     ],
+  //     messages: [],
+  //     profile: {
+  //       name: 'Dr. Nassima Maarouf',
+  //       specialty: 'Cardiology',
+  //       email: 'dr.NassimaMaa@gmail.com',
+  //       phone: '0687654321',
+  //       office: 'Room 101, NMLab'
+  //     }
+  //   };
   
-    // DOM Elements
     const DOM = {
       tabs: document.querySelectorAll('.sidebar nav ul li'),
       contents: document.querySelectorAll('.content'),
       pageTitle: document.getElementById('page-title'),
-      // Dashboard
       todayAppointmentsContainer: document.querySelector('.today-appointments'),
-      // Appointments
       appointmentListContainer: document.querySelector('.appointment-list'),
-      // Messaging
       chatMessages: document.getElementById('chat-messages'),
       messageInput: document.getElementById('message-text'),
-      // Prescription form
       btnSubmitPrescription: document.getElementById('btn-submit-prescription'),
-      // Prescription History
       prescriptionHistoryList: document.querySelector('.prescription-history-list'),
-      // Profile details
       profileDetails: document.querySelector('.profile-details'),
-      // Modal
       appointmentModal: document.getElementById('appointment-modal'),
       modalTitle: document.getElementById('modal-title'),
       modalBody: document.getElementById('modal-body'),
@@ -116,45 +111,30 @@ document.addEventListener('DOMContentLoaded', function() {
       closeModalBtns: document.querySelectorAll('.close-modal, .btn-close-modal')
     };
   
-    // Initialization
     initEventListeners();
     renderAll();
   
     function initEventListeners() {
       document.addEventListener('DOMContentLoaded', function() {
       
-        // Add this to restore the last active tab
         const lastActiveTab = localStorage.getItem('currentTab');
         if (lastActiveTab) {
           switchTab(lastActiveTab);
         }
       });
-      // Tab switching
       DOM.tabs.forEach(tab => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
-      });
-  
-      // Delegate appointment action buttons (View/Cancel)
+      });  
       document.addEventListener('click', function(e) {
-        // if (e.target.closest('.btn-delete')) {
-        //   const id = parseInt(e.target.closest('.btn-delete').dataset.id);
-        //   if (confirm("Are you sure you want to cancel this appointment? The patient will be notified.")) {
-        //     cancelAppointment(id);
-        //     alert("The patient has been notified about the cancellation.");
-        //   }
-        // }
         if (e.target.closest('.btn-view')) {
           const id = parseInt(e.target.closest('.btn-view').dataset.id);
           viewAppointment(id);
         }
       });
-  
-      // Modal close buttons
       DOM.closeModalBtns.forEach(btn => {
         btn.addEventListener('click', () => DOM.appointmentModal.classList.remove('active'));
       });
   
-      // Modal cancel appointment button
       if (DOM.modalCancelBtn) {
         DOM.modalCancelBtn.addEventListener('click', function() {
           const id = parseInt(this.dataset.id);
@@ -163,24 +143,8 @@ document.addEventListener('DOMContentLoaded', function() {
           alert("The patient has been notified about the cancellation.");
         });
       }
-  
-      // Messaging: send message (simulate response)
-      // document.addEventListener('click', function(e) {
-      //   if (e.target.closest('#btn-send-message')) {
-      //     sendMessage();
-      //   }
-      // });
-      
-      // Prescription form submission
-      if (DOM.btnSubmitPrescription) {
-        DOM.btnSubmitPrescription.addEventListener('click', function() {
-          WritePrescription();
-        });
-      }
-
     }
   
-    // Tab switching
     function switchTab(tabName) {
       DOM.tabs.forEach(tab => {
         tab.classList.toggle('active', tab.dataset.tab === tabName);
@@ -214,37 +178,36 @@ document.addEventListener('DOMContentLoaded', function() {
       if(tabName === 'appointments') {
         sessionStorage.setItem('currentTab', tabName);
       }
-      if(tabName === 'dashboard' ) {
-        sessionStorage.setItem('currentTab', tabName);
+      if(tabName === 'dashboard'|| tabName === undefined ) {
+        sessionStorage.setItem('currentTab', 'dashboard');
+        ageChart();
+        bloodFunction();
+        rdvProgression();
+        renderUpcomingRdv();
+        renderAvgAge();
+        renderRdvCounts();
+        renderMonthlyPatient();
       }
+
       
     }
 
 
 
   
-    // Render all sections
     function renderAll() {
+      
       switchTab(sessionStorage.getItem("currentTab"));
-      // renderDashboard();
       renderAppointments();
-      // renderMessages();
       renderPrescriptionHistory();
       renderProfile();
       renderDocName();
-      ageChart();
-      bloodFunction();
-      rdvProgression();
-      renderUpcomingRdv();
-      renderAvgAge();
-      renderRdvCounts();
-      renderMonthlyPatient();
     }
     function isoToDateTime(isoString) {
       const date = new Date(isoString);
     
       const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+      const month = String(date.getMonth() + 1).padStart(2, '0'); 
       const day = String(date.getDate()).padStart(2, '0');
     
       const hours = String(date.getHours()).padStart(2, '0');
@@ -252,25 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
       return `${year}-${month}-${day} ${hours}:${minutes}`;
     }
-  
-    // Render Dashboard (today's appointments summary)
-    // function renderDashboard() {
-    //   if (DOM.todayAppointmentsContainer) {
-    //     if (state.todaysAppointments.length > 0) {
-    //       DOM.todayAppointmentsContainer.innerHTML = state.todaysAppointments.map(app => `
-    //         <p><strong>${app.patientName}</strong> - ${app.specialty}</p>
-    //         <p><i class="far fa-calendar-alt"></i> ${formatDate(app.date)} at ${app.time}</p>
-    //         <button class="btn-delete" data-id="${app.id}">Cancel</button>
-    //       `).join('');
-    //     } else {
-    //       DOM.todayAppointmentsContainer.innerHTML = `<p>No appointments for today.</p>`;
-    //     }
-    //   }
-    // }
-  
 
-  
-    // Render Appointments List
 async function renderAppointments() {
       
       if (DOM.appointmentListContainer) {
@@ -301,7 +246,6 @@ async function renderAppointments() {
               button.addEventListener('click', async () => {
                 const appointmentId = button.getAttribute('data-id');
                 
-                // Create confirmation dialog
                 const confirmCancel = confirm("Êtes-vous sûr de vouloir annuler ce rendez-vous?");
                 
                 if (confirmCancel) {
@@ -309,7 +253,7 @@ async function renderAppointments() {
                   
                   try {
                     const cancelResponse = await fetch(cancelUrl, {
-                      method: 'POST', // Or whichever method your API requires
+                      method: 'POST',
                       headers: {
                         'Authorization': `Token ${token}`,
                         'Content-Type': 'application/json'
@@ -317,7 +261,6 @@ async function renderAppointments() {
                     });
                     
                     if (cancelResponse.ok) {
-                      // Show success message with refresh button
                       const successDiv = document.createElement('div');
                       successDiv.className = 'success-message';
                       successDiv.innerHTML = `
@@ -327,8 +270,6 @@ async function renderAppointments() {
                         </div>
                       `;
                       document.body.appendChild(successDiv);
-                      
-                      // Add style to make it appear as a modal
                       successDiv.style.position = 'fixed';
                       successDiv.style.top = '0';
                       successDiv.style.left = '0';
@@ -345,7 +286,6 @@ async function renderAppointments() {
                       popup.style.borderRadius = '5px';
                       popup.style.textAlign = 'center';
                       
-                      // Add refresh functionality
                       document.getElementById('refresh-btn').addEventListener('click', () => {
                         location.reload();
                       });
@@ -370,73 +310,65 @@ async function renderAppointments() {
       }
     }
 
-    function toIsoFormat(datetimelocal) {
-      return datetimelocal+":00Z";
-    }
-    function clearFields() {
-      cin.value = '';
-      daterdv.value = '';
-      diagnostique.value = '';
-      traitment.value = '';
-      notes.value = '';
-    }
 
+    function datetimeLocalToISO(datetimeLocalStr) {
+      const date = new Date(datetimeLocalStr);
+      return date.toISOString();
+    }
+        
     async function WritePrescription() {
       const url = "http://127.0.0.1:8000/docteur/write-prescription/";
       const submitBtn = document.getElementById("btn-submit-prescription");
-      const cin = document.getElementById("cin");
-      const daterdv = document.getElementById("daterdv");
-      const diagnostique = document.getElementById("diagnostique");
-      const traitment = document.getElementById("traitment");
-      const notes = document.getElementById("notes");
-      submitBtn.addEventListener('click' , async () => {
+      
+      function clearFields() {
+        document.getElementById("cin").value = "";
+        document.getElementById("daterdv").value = "";
+        document.getElementById("diagnostique").value = "";
+        document.getElementById("traitement").value = "";
+        document.getElementById("notes").value = "";
+      }
+      
+      submitBtn.addEventListener('click', async () => {
+        const cin = document.getElementById("cin").value;
+        const daterdv = document.getElementById("daterdv").value;
+        const diagnostique = document.getElementById("diagnostique").value;
+        const traitement = document.getElementById("traitement").value;
+        const notes = document.getElementById("notes").value;
 
+    
         try {
-            const result = await fetch(url , {
-              method:'POST',
-              headers: {
-                "Authorization":`Token ${token}`,
-                "Content-Type":"application/json"
-              },
-              body:JSON.stringify({
-                  'patient_cin': cin.value,
-                  'date_rendezvous': toIsoFormat(daterdv.value),
-                  'diagnostique': diagnostique.value,
-                  'traitment': traitment.value,
-                  'notes': notes.value
-              })
-            });
-            if (result.ok) {
-              const sucessMessage = document.querySelector(".sucess-message");
-              sucessMessage.innerHTML = `<p>La prescription est ajouté avec succes <\p>`;
-              clearFields();
-            }
-            else {
-              const errorMessage = document.querySelector(".error-message");
-              errorMessage.innerHTML = `<p>Erreur lors de l'ajout de la prescription<\p>`;
-              clearFields();
-            }
-          } catch(error){
-            console.error(error);
-          }
+          const result = await fetch(url, {
+            method: 'POST',
+            headers: {
+              "Authorization": `Token ${token}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              'patient_cin': cin,
+              'date_rendezvous': datetimeLocalToISO(daterdv),
+              'diagnostique': diagnostique,
+              'traitment': traitement,
+              'notes': notes
+            })
           });
+          
+          if (result.ok) {
+            const successMessage = document.querySelector(".sucess-message");
+            successMessage.innerHTML = "<p>La prescription est ajoutée avec succès</p>";
+            clearFields();
+          } else {
+            const errorMessage = document.querySelector(".error-message");
+            errorMessage.innerHTML = "<p>Erreur lors de l'ajout de la prescription</p>";
+          }
+        } catch(error) {
+          console.error("API Error:", error);
+          const errorMessage = document.querySelector(".error-message");
+          errorMessage.innerHTML = "<p>Une erreur est survenue lors de la communication avec le serveur</p>";
+        }
+      });
     }
   
-    // Render Messages (simple simulation)
-    // function renderMessages() {
-    //   if (DOM.chatMessages) {
-    //     DOM.chatMessages.innerHTML = state.messages.map(msg => `
-    //       <div class="message ${msg.from === 'doctor' ? 'doctor' : 'patient'}">
-    //         <p>${msg.text}</p>
-    //         <span>${msg.time}</span>
-    //       </div>
-    //     `).join('');
-    //     DOM.chatMessages.scrollTop = DOM.chatMessages.scrollHeight;
-    //   }
-    // }
-  
-
-  
+ 
     function renderPrescriptionHistory() {
       const researchBtn = document.getElementById('search-history-btn');
       const cinValue = document.getElementById('patient-cin');
@@ -453,24 +385,23 @@ async function renderAppointments() {
           });
           const data = await response.json();
 
-          if (response.ok && data.prescriptions.length > 0) {
-            if(data.prescriptions.length() > 0){}
+          if (response.ok) {
+            if(data.prescriptions.length > 0){
+            const title = document.querySelector('.prescription-historical-title');
+            title.innerHTML = `<p>Prescriptions pour ${data.nom_patient}</p>`;
             DOM.prescriptionHistoryList.innerHTML = `
-              <div class="prescription-title">
-                <h3>Prescriptions pour ${data.nom_patient}</h3>
-              </div>
               ${data.prescriptions.map(prescription => `
                 <div class="prescription-item">
                   <h4>${prescription.diagnostique} : ${prescription.traitment}</h4>
                   <p>${prescription.notes}</p>
-                  <p><small>${isoToDateTime(prescription.date)}</small></p>
                 </div>
               `).join('')}
             `;
           } else {
             DOM.prescriptionHistoryList.innerHTML = `<p>Pas de prescriptions au moment pour cet patient ou une erreur dans serveur est survenue</p>`;
           }
-        } catch (error) {
+
+        } }catch (error) {
           console.log(error);
         }
       });
@@ -494,27 +425,7 @@ async function renderAppointments() {
         }
       }
     }
-    // // Appointment Modal - for viewing details
-    // function viewAppointment(id) {
-    //   const app = state.todaysAppointments.find(a => a.id === id);
-    //   if (app) {
-    //     DOM.modalTitle.textContent = "Appointment Details";
-    //     DOM.modalBody.innerHTML = `
-    //       <p><strong>Patient:</strong> ${app.patientName}</p>
-    //       <p><strong>Specialty:</strong> ${app.specialty}</p>
-    //       <p><strong>Date:</strong> ${formatDate(app.date)}</p>
-    //       <p><strong>Time:</strong> ${app.time}</p>
-    //       <p><strong>Reason:</strong> ${app.reason}</p>
-    //     `;
-    //     // Optionally, attach the appointment id for cancellation
-    //     DOM.modalCancelBtn.dataset.id = app.id;
-    //     DOM.appointmentModal.classList.add('active');
-    //   } else {
-    //     alert("Appointment not found.");
-    //   }
-    // }
-  
-    // Cancel an appointment
+
    async function cancelAppointment(id) {
       state.todaysAppointments = state.todaysAppointments.filter(a => a.id !== id);
       renderDashboard();
@@ -620,24 +531,24 @@ async function renderAppointments() {
                 label: 'Répartition Groupe Sanguin',
                 data: values,
                 backgroundColor: [
-                  'rgba(255, 99, 132, 0.7)',
-                  'rgba(54, 162, 235, 0.7)',
-                  'rgba(255, 206, 86, 0.7)',
-                  'rgba(75, 192, 192, 0.7)',
-                  'rgba(153, 102, 255, 0.7)',
-                  'rgba(255, 159, 64, 0.7)',
-                  'rgba(201, 203, 207, 0.7)',
-                  'rgba(100, 149, 237, 0.7)'
+                  'rgba(153, 0, 0, 0.7)', 
+                  'rgba(204, 0, 0, 0.7)',  
+                  'rgba(255, 51, 51, 0.7)', 
+                  'rgba(204, 51, 0, 0.7)', 
+                  'rgba(255, 102, 102, 0.7)',
+                  'rgba(153, 51, 51, 0.7)',
+                  'rgba(102, 0, 0, 0.7)',
+                  'rgba(204, 102, 102, 0.7)'
                 ],
                 borderColor: [
-                  'rgba(255, 99, 132, 1)',
-                  'rgba(54, 162, 235, 1)',
-                  'rgba(255, 206, 86, 1)',
-                  'rgba(75, 192, 192, 1)',
-                  'rgba(153, 102, 255, 1)',
-                  'rgba(255, 159, 64, 1)',
-                  'rgba(201, 203, 207, 1)',
-                  'rgba(100, 149, 237, 1)'
+                  'rgba(153, 0, 0, 1)',
+                  'rgba(204, 0, 0, 1)',
+                  'rgba(255, 51, 51, 1)',
+                  'rgba(204, 51, 0, 1)',
+                  'rgba(255, 102, 102, 1)',
+                  'rgba(153, 51, 51, 1)',
+                  'rgba(102, 0, 0, 1)',
+                  'rgba(204, 102, 102, 1)'
                 ],
                 borderWidth: 1
               }]
@@ -838,12 +749,10 @@ async function renderAppointments() {
   }
 
 
-    // Helper: format date string
-    function formatDate(dateString) {
-      const options = { year: 'numeric', month: 'long', day: 'numeric' };
-      return new Date(dateString).toLocaleDateString('en-GB', options);
+    function toIsoFormat(dateString) {
+      const date = new Date(dateString);
+      return date.toISOString();
     }
-  });
   
 
 
@@ -852,7 +761,6 @@ async function renderPatientList() {
   const patientList = document.querySelector(".patients-list");
   const sendBtn = document.getElementById("btn-send-message");
   
-  // Check if element exists first
   if (!patientList) {
     console.error("Patient list container not found");
     return;
@@ -948,7 +856,6 @@ async function getConversations(idContact) {
         chat.innerHTML = ''; 
         
         if (messages.length === 0) {
-          // Aucun message
           chat.innerHTML = `
             <div class="empty-chat">
               <i class="fas fa-comment-dots"></i>
@@ -957,7 +864,6 @@ async function getConversations(idContact) {
           return;
         }
         
-        // Get current user info once before the loop
         const userResponse = await fetch(`http://127.0.0.1:8000/docteur/users/${drData.id}/`, {
           method: 'GET',
           headers: {
@@ -983,7 +889,6 @@ async function getConversations(idContact) {
           chat.appendChild(dateSeparator);
           
           dailyMessages.forEach(msg => {
-            // Check if this message was sent by current user
             const isMe = msg.envoie === currentUserId;
             
             const messageDiv = document.createElement('div');
@@ -1018,7 +923,6 @@ async function getConversations(idContact) {
   }
   
 
-  // Helper: Grouper les messages par jour
 function groupMessagesByDay(messages) {
   return messages.reduce((groups, msg) => {
     const date = new Date(msg.date_message).toDateString();
@@ -1028,7 +932,6 @@ function groupMessagesByDay(messages) {
   }, {});
 }
 
-// Helper: Formater la date pour les séparateurs
 function formatChatDate(dateString) {
   const today = new Date().toDateString();
   const date = new Date(dateString);
@@ -1053,7 +956,6 @@ async function sendMessage(patientID) {
   const url = "http://127.0.0.1:8000/docteur/write-message/";
   const messageInput = document.getElementById("message-text");
   
-  // Check if message is empty
   if (!messageInput.value.trim()) {
     return; 
   }
@@ -1093,7 +995,6 @@ async function sendMessage(patientID) {
         chat.appendChild(todaySeparator);
       }
       
-      // Create message element
       const messageDiv = document.createElement('div');
       messageDiv.className = 'message sent';
       
