@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404
 from docteur_app.serializers import MessageSerializer
 from docteur_app.models import Prescription,Message
 from docteur_app.serializers import PrescriptionSerializer
-from datetime import date,datetime
+from django.utils import timezone
 from docteur_app.views import update_rendez_vous_etat
 
 
@@ -155,25 +155,22 @@ def ListDoctorsViews(request):
 @permission_classes([IsAuthenticated])
 def nextAppointmentView(request, cin):
     update_rendez_vous_etat()
-    patient = Patient.objects.filter(cin=cin).first()
-    if patient:
-        today = date.today()
-        now = datetime.now()
-        time_now = now.time()
-        rdv = RendezVous.objects.filter(
-            patient=patient,
-            date__date__gte=today,
-            date__time__gte=time_now,
-            etat = 'planifié'
-        ).order_by('date')
-        
-        if rdv.exists():
-            serializer = RendezVousSerializer(rdv.first())
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response({"message": "No upcoming appointments found"}, status=status.HTTP_404_NOT_FOUND)
+    patient = get_object_or_404(Patient, cin=cin)    
+    now = timezone.now()
+    next_appointment = RendezVous.objects.filter(
+        patient=patient,
+        date__gt=now,
+        etat='planifié'
+    ).order_by('date').first()
+    
+    if next_appointment:
+        serializer = RendezVousSerializer(next_appointment)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     else:
-        return Response({"message": "Patient not found"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"message": "Aucun rendez-vous à venir trouvé"}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
     
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

@@ -55,44 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
     logouthandling();
   });    
 });
-  // const state = {
-  //     todaysAppointments: [
-  //       {
-  //         id: 1,
-  //         patientName: 'Imane Bouzid',
-  //         specialty: 'Cardiology',
-  //         date: '2023-06-15',
-  //         time: '09:30',
-  //         reason: 'Routine check-up'
-  //       },
-  //       {
-  //         id: 2,
-  //         patientName: 'Leila Bensalem',
-  //         specialty: 'Cardiology',
-  //         date: '2023-06-15',
-  //         time: '10:15',
-  //         reason: 'Follow-up consultation'
-  //       }
-  //     ],
-  //     prescriptions: [
-  //       {
-  //         patientName: 'Jane Doe',
-  //         medication: 'Atorvastatin',
-  //         dosage: '20mg',
-  //         instructions: 'Take one tablet daily after dinner',
-  //         date: '2023-06-10'
-  //       }
-  //     ],
-  //     messages: [],
-  //     profile: {
-  //       name: 'Dr. Nassima Maarouf',
-  //       specialty: 'Cardiology',
-  //       email: 'dr.NassimaMaa@gmail.com',
-  //       phone: '0687654321',
-  //       office: 'Room 101, NMLab'
-  //     }
-  //   };
-  
+
     const DOM = {
       tabs: document.querySelectorAll('.sidebar nav ul li'),
       contents: document.querySelectorAll('.content'),

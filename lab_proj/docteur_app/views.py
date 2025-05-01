@@ -125,7 +125,7 @@ def seeMessagesView(request, contact_id):
             serializer = MessageSerializer(conversation, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            return Response([], status=status.HTTP_200_OK)  # Return empty array instead of 404
+            return Response([], status=status.HTTP_200_OK)
 
     except User.DoesNotExist:
         return Response({"message": "Contact introuvable"}, status=status.HTTP_404_NOT_FOUND)
