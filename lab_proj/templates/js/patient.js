@@ -10,6 +10,10 @@ try {
   window.location.href = "login.html";
 }
 
+const tab = sessionStorage.getItem('currentTab');
+if(tab === null || tab === undefined) {
+  sessionStorage.setItem('currentTab', 'dashboard');
+}
 const token = sessionStorage.getItem('patientoken');
 let docID = null;
 let currentUserId = null;
@@ -51,6 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (response.ok) {
           console.log("Logout successful, clearing token and redirecting...");
           sessionStorage.removeItem('authToken');
+          sessionStorage.removeItem('currentTab');
           window.location.href = 'login.html';
         } else {
           console.error('Error:', data.detail || 'Logout failed');
@@ -153,23 +158,34 @@ const DOM = {
       DOM.pageTitle.textContent = tabText.textContent.trim();
     }
     if(tabName === 'messages'){
-      renderDrList();    }
+      renderDrList();
+      sessionStorage.setItem('currentTab', 'messages');
+    }
+    if(tabName === 'appointments') {
+      sessionStorage.setItem('currentTab', 'appointments');
+    }
     if(tabName === 'dashboard') {
       renderNextRdv();
+      sessionStorage.setItem('currentTab', 'dashboard');
     }
     if (tabName === 'history') {
       renderHistory();
+      sessionStorage.setItem('currentTab', 'history');
     }
     if (tabName === 'profile') {
       renderProfile();
+      sessionStorage.setItem('currentTab', 'profile');
+
     }
     if (tabName === 'prescriptions') {
       renderPrescriptions();
+      sessionStorage.setItem('currentTab', 'prescriptions');
     }
 
   }
 
   function renderAll() {
+    switchTab(sessionStorage.getItem('currentTab'));
     renderPrescriptions();
     renderProfile();
     prendreRdv();
