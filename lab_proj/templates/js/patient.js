@@ -623,7 +623,6 @@ async function getConversations(idContact) {
             <i class="fas fa-comment-dots"></i>
             <p>Envoyez votre premier message</p>
           </div>`;
-        return;
       }
       
       const userResponse = await fetch(`http://127.0.0.1:8000/patient/users/${patientData.id}/`, {
