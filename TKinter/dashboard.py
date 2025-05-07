@@ -1,84 +1,110 @@
+# dashboard.py
 import tkinter as tk
-from tkinter import messagebox, scrolledtext
-import api_functions
+from tkinter import ttk, messagebox
+from datetime import datetime
+from api_functions import APIClient
 
-class MainDashboard:
-    def __init__(self, token, user_data):
-        self.token = token
-        self.user = user_data
-        self.root = tk.Tk()
-        self.root.title("Tableau de bord Docteur")
-        self.root.geometry("800x600")
-        self.root.configure(bg="#0A2740")
-        self.create_widgets()
-        self.root.mainloop()
+DARK_BLUE = "#0B3D91"
+WHITE = "#FFFFFF"
 
-    def create_widgets(self):
-        # Boutons principaux
-        btn_frame = tk.Frame(self.root, bg="#0A2740")
-        btn_frame.pack(pady=20)
+class DoctorDashboard(tk.Tk):
+    def __init__(self, client: APIClient):
+        super().__init__()
+        self.client = client
+        self.title("Dashboard Docteur")
+        self.configure(bg=DARK_BLUE)
+        self.geometry("800x600")
+        self._build_ui()
 
-        tk.Button(btn_frame, text="Rendez-vous du jour", command=self.show_appointments,
-                  fg="white", bg="#1E3A8A", width=20, bd=0, pady=5).grid(row=0, column=0, padx=10)
-        tk.Button(btn_frame, text="Rédiger ordonnance", command=self.write_prescription,
-                  fg="white", bg="#1E3A8A", width=20, bd=0, pady=5).grid(row=0, column=1, padx=10)
-        tk.Button(btn_frame, text="Profil Docteur", command=self.view_profile,
-                  fg="white", bg="#1E3A8A", width=20, bd=0, pady=5).grid(row=0, column=2, padx=10)
-        tk.Button(btn_frame, text="Déconnexion", command=self.logout,
-                  fg="white", bg="#B91C1C", width=20, bd=0, pady=5).grid(row=0, column=3, padx=10)
+    def _build_ui(self):
+        style = ttk.Style(self)
+        style.theme_use('clam')
+        style.configure('TNotebook.Tab', background=DARK_BLUE, foreground=WHITE, padding=10)
+        style.map('TNotebook.Tab', background=[('selected', WHITE)], foreground=[('selected', DARK_BLUE)])
 
-        # Zone de contenu
-        self.content_frame = tk.Frame(self.root, bg="#0A2740")
-        self.content_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(fill='both', expand=True, padx=10, pady=10)
 
-    def clear_content(self):
-        for widget in self.content_frame.winfo_children():
-            widget.destroy()
+        self._tab_today()
+        self._tab_prescription()
+        self._tab_profile()
 
-    def show_appointments(self):
-        self.clear_content()
-        appts = api_functions.get_today_rendezvous(self.token)
-        tk.Label(self.content_frame, text="Rendez-vous du jour", fg="white", bg="#0A2740", font=(None, 14, 'bold')).pack(pady=10)
-        text = scrolledtext.ScrolledText(self.content_frame, width=80, height=20)
-        text.pack()
-        if appts:
-            for rdv in appts:
-                text.insert(tk.END, f"- {rdv['heure']} : {rdv['patient_nom']}\n")
-        else:
-            text.insert(tk.END, "Aucun rendez-vous pour aujourd'hui.")
-
-    def write_prescription(self):
-        self.clear_content()
-        tk.Label(self.content_frame, text="Rédiger une ordonnance", fg="white", bg="#0A2740", font=(None, 14, 'bold')).pack(pady=10)
-        tk.Label(self.content_frame, text="ID Patient:", fg="white", bg="#0A2740").pack(pady=(5,2))
-        self.patient_entry = tk.Entry(self.content_frame, width=30)
-        self.patient_entry.pack()
-        tk.Label(self.content_frame, text="Texte ordonnance:", fg="white", bg="#0A2740").pack(pady=(10,2))
-        self.presc_text = scrolledtext.ScrolledText(self.content_frame, width=80, height=10)
-        self.presc_text.pack()
-        tk.Button(self.content_frame, text="Envoyer", command=self.submit_prescription,
-                  fg="white", bg="#1E3A8A", width=15, bd=0, pady=5).pack(pady=10)
-
-    def submit_prescription(self):
-        pid = self.patient_entry.get()
-        text = self.presc_text.get("1.0", tk.END).strip()
-        if not pid or not text:
-            messagebox.showwarning("Champs manquants", "Veuillez renseigner tous les champs.")
+    def _tab_today(self):
+        frame = ttk.Frame(self.notebook)
+        self.notebook.add(frame, text="Aujourd'hui")
+        data = self.client.get_today_appointments()
+        if isinstance(data, dict) and data.get("message"):
+            lbl = tk.Label(frame, text=data["message"], bg=WHITE, fg="black", font=("Arial", 14))
+            lbl.pack(pady=20)
             return
-        resp = api_functions.write_prescription(self.token, pid, text)
-        if resp.ok:
-            messagebox.showinfo("Succès", "Ordonnance envoyée.")
+
+        for rdv in data:
+            rdv_frame = tk.Frame(frame, bg=WHITE, bd=1, relief='solid', padx=10, pady=10)
+            rdv_frame.pack(fill='x', pady=5)
+            info = f"{rdv['heure']} - Patient: {rdv['patient_nom']} {rdv['patient_prenom']}"
+            tk.Label(rdv_frame, text=info, bg=WHITE, anchor='w').grid(row=0, column=0, sticky='w')
+            btn = tk.Button(rdv_frame, text="Annuler",
+                            command=lambda id=rdv['id']: self._cancel(rdv_frame, id))
+            btn.grid(row=0, column=1, padx=10)
+
+    def _cancel(self, widget, rdv_id):
+        res = self.client.cancel_appointment(rdv_id)
+        if "succées" in res.get("message", ""):
+            widget.destroy()
+            messagebox.showinfo("Succès", "Rendez-vous annulé et patient informé.")
         else:
-            messagebox.showerror("Erreur", "Impossible d'envoyer l'ordonnance.")
+            messagebox.showerror("Erreur", res.get("message", "Erreur inconnue"))
 
-    def view_profile(self):
-        self.clear_content()
-        tk.Label(self.content_frame, text="Profil Docteur", fg="white", bg="#0A2740", font=(None, 14, 'bold')).pack(pady=10)
-        tk.Label(self.content_frame, text=f"Nom: {self.user.get('nom', 'N/A')}", fg="white", bg="#0A2740").pack(pady=5)
-        tk.Label(self.content_frame, text=f"Email: {self.user.get('email', 'N/A')}", fg="white", bg="#0A2740").pack(pady=5)
+    def _tab_prescription(self):
+        frame = ttk.Frame(self.notebook)
+        self.notebook.add(frame, text="Ordonnances")
 
-    def logout(self):
-        api_functions.logout(self.token)
-        self.root.destroy()
-        import auth_page
-        auth_page.AuthPage()
+        labels = ["CIN Patient", "Date et heure (ISO)", "Diagnostic", "Traitement", "Notes (opt.)"]
+        self.entries = {}
+        for i, txt in enumerate(labels):
+            tk.Label(frame, text=txt, bg=WHITE).grid(row=i, column=0, sticky='e', pady=5, padx=5)
+            ent = tk.Entry(frame, width=50)
+            ent.grid(row=i, column=1, pady=5, padx=5)
+            self.entries[txt] = ent
+
+        btn = tk.Button(frame, text="Enregistrer",
+                        command=self._write_prescription, bg=DARK_BLUE, fg=WHITE, padx=10, pady=5)
+        btn.grid(row=len(labels), column=1, sticky='e', pady=20)
+
+    def _write_prescription(self):
+        vals = {k: e.get() for k, e in self.entries.items()}
+        res = self.client.write_prescription(
+            vals["CIN Patient"],
+            vals["Date et heure (ISO)"],
+            vals["Diagnostic"],
+            vals["Traitement"],
+            vals["Notes (opt.)"]
+        )
+        if "succées" in res.get("message", ""):
+            messagebox.showinfo("Succès", "Prescription enregistrée.")
+            for e in self.entries.values():
+                e.delete(0, tk.END)
+        else:
+            messagebox.showerror("Erreur", res.get("message", "Erreur inconnue"))
+
+    def _tab_profile(self):
+        frame = ttk.Frame(self.notebook)
+        self.notebook.add(frame, text="Profil")
+        profile = self.client.get_profile()
+        for i, (k, v) in enumerate(profile.items()):
+            tk.Label(frame, text=f"{k} :", bg=WHITE).grid(row=i, column=0, sticky='e', pady=5, padx=5)
+            tk.Label(frame, text=v, bg=WHITE).grid(row=i, column=1, sticky='w', pady=5, padx=5)
+
+        btn = tk.Button(frame, text="Se déconnecter", command=self._logout,
+                        bg=DARK_BLUE, fg=WHITE, padx=10, pady=5)
+        btn.grid(row=len(profile), column=1, sticky='e', pady=20)
+
+    def _logout(self):
+        if self.client.logout():
+            self.destroy()
+            # relancer la page de connexion
+            from login_page import LoginPage
+            LoginPage().mainloop()
+        else:
+            messagebox.showerror("Erreur", "Échec de la déconnexion.")
+
