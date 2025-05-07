@@ -17,6 +17,7 @@ const token = sessionStorage.getItem('token');
 let drData = JSON.parse(sessionStorage.getItem('data'));
 let patientID = null;
 let currentUserId = null;
+let selectedContact = null;
 document.addEventListener('DOMContentLoaded', function() {
   const logoutbutton = document.querySelector(".btn-logout")
   
@@ -98,14 +99,14 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', () => DOM.appointmentModal.classList.remove('active'));
       });
   
-      if (DOM.modalCancelBtn) {
-        DOM.modalCancelBtn.addEventListener('click', function() {
-          const id = parseInt(this.dataset.id);
-          cancelAppointment(id);
-          DOM.appointmentModal.classList.remove('active');
-          alert("The patient has been notified about the cancellation.");
-        });
-      }
+      // if (DOM.modalCancelBtn) {
+      //   DOM.modalCancelBtn.addEventListener('click', function() {
+      //     const id = parseInt(this.dataset.id);
+      //     cancelAppointment(id);
+      //     DOM.appointmentModal.classList.remove('active');
+      //     alert("The patient has been notified about the cancellation.");
+      //   });
+      // }
     }
   
     function switchTab(tabName) {
@@ -135,6 +136,9 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       if(tabName === 'messages') {
         renderPatientList();
+        if(selectedContact !== null) {
+          getConversations(selectedContact);
+        }
         sessionStorage.setItem('currentTab', tabName);
 
       }
@@ -389,11 +393,11 @@ async function renderAppointments() {
       }
     }
 
-   async function cancelAppointment(id) {
-      state.todaysAppointments = state.todaysAppointments.filter(a => a.id !== id);
-      renderDashboard();
-      renderAppointments();
-    }
+  //  async function cancelAppointment(id) {
+  //     state.todaysAppointments = state.todaysAppointments.filter(a => a.id !== id);
+  //     renderDashboard();
+  //     renderAppointments();
+  //   }
   
     function renderDocName() {
       const docSection = document.getElementById("nom-doc");
@@ -755,12 +759,14 @@ async function renderPatientList() {
         sendBtn.addEventListener('click', (event)=>{
           event.preventDefault();
           sendMessage(patientID);
-          getConversations(card.id);
+          // getConversations(card.id);
         })
         document.querySelectorAll('.patient-card').forEach(card => {
 
           card.addEventListener('click', () => {
             patientID = card.id;
+            sessionStorage.setItem('selectedContact', patientID);
+            selectedContact = sessionStorage.getItem('selectedContact');
             getConversations(card.id);
            
             
@@ -824,7 +830,6 @@ async function getConversations(idContact) {
               <i class="fas fa-comment-dots"></i>
               <p>Envoyez votre premier message</p>
             </div>`;
-          return;
         }
         
         const userResponse = await fetch(`http://127.0.0.1:8000/docteur/users/${drData.id}/`, {

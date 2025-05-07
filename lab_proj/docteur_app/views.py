@@ -16,7 +16,7 @@ from datetime import datetime
 
 def update_rendez_vous_etat():
     """Met à jour automatiquement l'état des rendez-vous en fonction de la date."""
-    maintenant = datetime.now()
+    maintenant = timezone.localtime(timezone.now())
     RendezVous.objects.filter(
         etat='planifié', 
         date__lt = maintenant
