@@ -204,7 +204,7 @@ async function renderAppointments() {
                   <p><i class="far fa-calendar-alt"></i> ${isoToDateTime(app.date)}</p>
                 </div>
               <div class="appointment-actions">
-                <button class="btn-delete" data-id="${app.id}">Cancel</button>
+                <button class="btn-delete" data-id="${app.id}">Annuler</button>
               </div>
               </div>
             `).join('');

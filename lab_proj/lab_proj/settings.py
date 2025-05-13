@@ -16,8 +16,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-TIME_ZONE = 'Africa/Casablanca'  # ou autre selon ton pays
-USE_TZ = True
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -122,11 +121,10 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
-
 USE_I18N = True
 
 USE_TZ = True
+TIME_ZONE = 'Africa/Casablanca'  
 
 
 # Static files (CSS, JavaScript, Images)
