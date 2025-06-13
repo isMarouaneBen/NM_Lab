@@ -61,7 +61,7 @@ python manage.py migrate
 
 5. Lancer le serveur de développement :
 ```bash
-python manage.py runserver
+cd lab_proj && python manage.py runserver
 ```
 
 ## 🏗 Structure du Projet
