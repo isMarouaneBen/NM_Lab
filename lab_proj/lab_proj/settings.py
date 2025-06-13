@@ -11,23 +11,22 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
+from decouple import config, Csv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-m93g_2gae2v_cv)1508o1^z8@m2*7=uo390lv(dil2a#3*zi5e'
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv())
 
 
 # Application definition
@@ -59,11 +58,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ALL = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5500",
-    "http://127.0.0.1:5500",
-]
+CORS_ALLOWED_ALL = False
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=Csv())
 
 ROOT_URLCONF = 'lab_proj.urls'
 
@@ -91,8 +87,8 @@ WSGI_APPLICATION = 'lab_proj.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
+        'NAME': BASE_DIR / config('DB_NAME', default='db.sqlite3'),
     }
 }
 
@@ -146,9 +142,9 @@ REST_FRAMEWORK = {
 
 AUTH_USER_MODEL = 'auth_app.User'
 
-# khass nsybo email for password reset
-EMAIL_HOST="smtp.gmail.com"
-EMAIL_PORT=465
-EMAIL_USE_SSL=True
-EMAIL_HOST_USER="ourgmail@gmail.com"
-EMAIL_HOST_PASSWORD="tobespecified"
+# Email configuration
+EMAIL_HOST = config('EMAIL_HOST')
+EMAIL_PORT = config('EMAIL_PORT', cast=int)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
