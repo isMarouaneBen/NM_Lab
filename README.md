@@ -1,8 +1,8 @@
-# MediCabinet - Système de Gestion de Cabinet Médical
+# NMLab - Système de Gestion de Cabinet Médical
 
 ## 📋 Description
 
-MediCabinet est une application web complète de gestion de cabinet médical développée avec Django et Django REST Framework. Elle permet la gestion efficace des patients, des médecins, des rendez-vous et des prescriptions médicales.
+NMLab est une application web complète de gestion de cabinet médical développée avec Django et Django REST Framework. Elle permet la gestion efficace des patients, des médecins, des rendez-vous et des prescriptions médicales.
 
 ## 🚀 Fonctionnalités
 
