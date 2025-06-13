@@ -37,8 +37,8 @@ MediCabinet est une application web complète de gestion de cabinet médical dé
 
 1. Cloner le répertoire :
 ```bash
-git clone https://github.com/votre-username/medicabinet.git
-cd medicabinet
+git clone https://github.com/isMarouaneBen/NM_Lab.git
+cd NM_Lab
 ```
 
 2. Créer un environnement virtuel :
@@ -103,7 +103,3 @@ Ce projet est sous licence GNU General Public License v3.0 - voir le fichier [LI
 ## 📧 Contact
 
 Pour toute question ou suggestion, n'hésitez pas à ouvrir une issue ou à nous contacter directement.
-
-## 🙏 Remerciements
-
-Merci à tous les contributeurs qui ont participé à ce projet.
