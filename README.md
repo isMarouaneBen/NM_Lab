@@ -37,7 +37,7 @@ NMLab est une application web complète de gestion de cabinet médical développ
 
 1. Cloner le répertoire :
 ```bash
-git clone https://github.com/isMarouaneBen/NM_Lab
+git clone https://github.com/isMarouaneBen/NM_Lab.git
 cd NM_Lab
 ```
 
