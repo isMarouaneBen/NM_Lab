@@ -33,7 +33,7 @@ NMLab est une application web complète de gestion de cabinet médical développ
 - **Base de données**: SQLite3
 - **Interface utilisateur**: Framework CSS moderne
 
-## ⚙️ Installation
+## ⚙️ Installation Locale
 
 1. Cloner le répertoire :
 ```bash
@@ -51,7 +51,7 @@ venv\Scripts\activate     # Windows
 
 3. Installer les dépendances :
 ```bash
-pip install -r requirements.txt
+pip install -r lab_proj/requirements.txt
 ```
 
 4. Appliquer les migrations :
@@ -63,6 +63,25 @@ python manage.py migrate
 ```bash
 cd lab_proj && python manage.py runserver
 ```
+## ⚙️ Installation Utilisant Docker (Vous deverez avoir Docker Desktop déja installé)
+
+1. Cloner le répertoire :
+```bash
+git clone https://github.com/isMarouaneBen/NM_Lab.git
+cd NM_Lab
+```
+
+2. Construire les images :
+```bash
+docker compose build
+```
+
+3. Lancer les conteneurs :
+```bash
+docker compose up -d
+```
+
+4. Acceder à https://localhost
 
 ## 🏗 Structure du Projet
 
@@ -83,7 +102,6 @@ lab_proj/
 ```
 SECRET_KEY=votre_clé_secrète
 DEBUG=True
-DATABASE_URL=sqlite:///db.sqlite3
 ```
 
 ## 👥 Contribution
