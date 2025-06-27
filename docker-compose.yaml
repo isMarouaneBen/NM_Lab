@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./lab_proj
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./lab_proj:/app/backend
+      - backend_data:/app/backend/data
+      - ./.env:/app/backend/.env
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: ${DEBUG}
+    env_file:
+      - .env
+    networks:
+      - nmlab_network
+
+  frontend:
+    ports:
+      - "80:80"
+    build: ./templates
+    depends_on:
+      - backend
+    volumes:
+      - ./templates:/app/frontend
+    networks:
+      - nmlab_network
+
+networks:
+  nmlab_network:
+    driver: bridge
+
+volumes:
+  backend_data:
+    driver: local
