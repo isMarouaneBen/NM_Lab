@@ -90,9 +90,11 @@ lab_proj/
 ├── auth_app/          # Gestion de l'authentification
 ├── docteur_app/       # Gestion des médecins
 ├── patient_app/       # Gestion des patients
-├── stat_app/          # Statistiques et analyses
-├── templates/         # Templates HTML
-└── lab_proj/         # Configuration principale
+├── stat_app/          # Statistiques et analyse
+├── lab_proj/          # Configuration principale
+
+templates/             # Pour les fichiers Statiques ( HTML )
+
 ```
 
 ## 🔐 Configuration
